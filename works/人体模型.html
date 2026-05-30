@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>🦴 人体关节调节模型 · 平板优化版 | 老细专用</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1a2e;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'PingFang HK', 'Courier New', monospace;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: pan-x pan-y pinch-zoom; /* 允许画布手势，面板内部已阻止 */
+        }
+        canvas { display: block; }
+
+        /* 控制面板 - 平板优化 */
+        .panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(20, 20, 40, 0.92);
+            border: 1px solid rgba(100, 200, 255, 0.35);
+            border-radius: 20px;
+            padding: 16px 18px;
+            color: #ccddee;
+            z-index: 10;
+            width: 300px;
+            max-width: 45vw;
+            max-height: 92vh;
+            overflow-y: auto;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            font-size: 13px;
+            transition: transform 0.3s ease;
+            -webkit-overflow-scrolling: touch;
+        }
+        /* 平板横屏时面板稍微宽一点 */
+        @media (min-width: 768px) {
+            .panel { width: 340px; max-width: 40vw; }
+        }
+        @media (max-width: 480px) {
+            .panel { width: 280px; max-width: 85vw; right: 2px; top: 5px; padding: 12px; }
+        }
+
+        .panel h2 {
+            text-align: center;
+            margin-bottom: 14px;
+            color: #ffcc66;
+            font-size: 17px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 12px rgba(255, 200, 80, 0.5);
+        }
+        .control-group {
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            border-left: 3px solid rgba(100, 180, 255, 0.5);
+            position: relative;
+        }
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #aaccff;
+            letter-spacing: 1px;
+        }
+        .control-group .range-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .control-group input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 8px;
+            background: linear-gradient(to right, #334466, #6688cc);
+            border-radius: 4px;
+            outline: none;
+            cursor: pointer;
+            touch-action: none; /* 防止滑动时页面滚动 */
+        }
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 28px;
+            height: 28px;
+            background: radial-gradient(circle, #ffffff, #aaccff);
+            border-radius: 50%;
+            border: 2px solid #ffcc66;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(255, 200, 80, 0.7);
+        }
+        .control-group .value-display {
+            min-width: 42px;
+            text-align: center;
+            font-size: 12px;
+            color: #ffcc66;
+            background: rgba(0,0,0,0.4);
+            padding: 4px 6px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+        .control-group .reset-single {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #aaa;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 14px;
+            line-height: 1;
+            cursor: pointer;
+            margin-left: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .control-group .reset-single:active { background: rgba(255,100,60,0.3); border-color: #ff6644; }
+
+        .limit-warning {
+            font-size: 10px;
+            color: #ff6644;
+            margin-top: 4px;
+            text-align: right;
+            opacity: 0;
+            transition: opacity 0.2s;
+            height: 16px;
+        }
+        .limit-warning.active { opacity: 1; }
+
+        /* 关节限位指示器 */
+        .range-indicator {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 9px;
+            color: #8899aa;
+            margin-top: 2px;
+        }
+        .range-indicator .bar {
+            flex: 1;
+            height: 4px;
+            background: #223344;
+            border-radius: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+        .range-indicator .bar .dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #33cc66;
+            border-radius: 50%;
+            top: -2px;
+            left: 0%;
+            transition: left 0.1s;
+            box-shadow: 0 0 6px #33cc66;
+        }
+        .range-indicator span { min-width: 24px; text-align: center; }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            flex: 1 1 auto;
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.06);
+            color: #ccc;
+            cursor: pointer;
+            font-size: 12px;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            text-align: center;
+            touch-action: manipulation;
+        }
+        .btn:active { background: rgba(255, 200, 80, 0.2); border-color: #ffcc66; color: #ffcc66; }
+        .btn.reset-btn { background: rgba(255, 100, 60, 0.15); border-color: rgba(255, 100, 60, 0.5); color: #ff8866; }
+        .btn.reset-btn:active { background: rgba(255, 100, 60, 0.35); }
+
+        /* 肌肉开关 */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 12px 0;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 10px;
+        }
+        .toggle-row span { color: #aaccff; font-size: 13px; }
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            background: #334;
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .toggle-switch.active { background: #ffaa33; }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
+        }
+        .toggle-switch.active::after { left: 24px; }
+
+        /* 微调按钮 (平板专用) */
+        .micro-btns {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            margin-left: 6px;
+        }
+        .micro-btns button {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #ccc;
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            font-size: 16px;
+            line-height: 1;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .micro-btns button:active { background: #ffaa33; color: #000; }
+
+        /* 姿态列表 */
+        .pose-list {
+            max-height: 120px;
+            overflow-y: auto;
+            margin: 6px 0;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 4px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .pose-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            background: rgba(255,255,255,0.03);
+            margin: 3px 0;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        .pose-item .pose-name { color: #ffcc66; }
+        .pose-item button {
+            background: rgba(255,0,0,0.3);
+            border: none;
+            color: white;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        .info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            color: rgba(200, 200, 220, 0.6);
+            font-size: 10px;
+            z-index: 10;
+            pointer-events: none;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <!-- 控制面板 -->
+    <div class="panel" id="panel">
+        <h2>🦴 关节调节</h2>
+
+        <!-- 肌肉线框开关 -->
+        <div class="toggle-row">
+            <span>🧬 显示肌肉线框</span>
+            <div class="toggle-switch" id="toggle-muscle" onclick="toggleMuscle()"></div>
+        </div>
+
+        <div id="controls-container">
+            <!-- JS动态生成控制组，方便绑定微调按钮 -->
+        </div>
+
+        <!-- 姿态管理 -->
+        <div style="margin-top:10px;">
+            <input type="text" id="pose-name" placeholder="姿态名称" style="width:100%; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.4); color:#fff; margin-bottom:6px;">
+            <button class="btn" id="btn-save-pose" style="width:100%;">💾 保存当前姿态</button>
+            <div class="pose-list" id="pose-list"></div>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn" id="btn-reset-all">🔄 全部重置</button>
+        </div>
+        <div class="btn-row">
+            <button class="btn" id="btn-tpose">🧍 T-Pose</button>
+            <button class="btn" id="btn-apose">🧘 A-Pose</button>
+            <button class="btn" id="btn-walk">🚶 行路动画</button>
+        </div>
+        <div class="btn-row" style="margin-top:4px;">
+            <label style="color:#aaa; font-size:11px;">动画速度</label>
+            <input type="range" id="anim-speed" min="0.5" max="2.5" value="1.0" step="0.1" style="flex:1; margin-left:8px;">
+            <span id="anim-speed-val" style="color:#ffcc66;">1.0x</span>
+        </div>
+    </div>
+
+    <div class="info">🦴 拖拽旋转视角 | 双指缩放 | 滑块调节关节 | 点击滑块后可用屏幕微调按钮</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // ========== 场景初始化 ==========
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+        scene.fog = new THREE.Fog(0x1a1a2e, 8, 30);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(3, 2.5, 6);
+        camera.lookAt(0, 1.2, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 1.2, 0);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.minDistance = 1.5;
+        controls.maxDistance = 12;
+        controls.update();
+
+        // ========== 光照 ==========
+        const ambientLight = new THREE.AmbientLight(0x334466, 1.2);
+        scene.add(ambientLight);
+        const keyLight = new THREE.DirectionalLight(0xffeedd, 2.5);
+        keyLight.position.set(5, 8, 3);
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.width = 1024;
+        keyLight.shadow.mapSize.height = 1024;
+        scene.add(keyLight);
+        const fillLight = new THREE.DirectionalLight(0x6688cc, 1.0);
+        fillLight.position.set(-3, 2, -2);
+        scene.add(fillLight);
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        rimLight.position.set(0, 1.5, -4);
+        scene.add(rimLight);
+
+        const groundGeom = new THREE.PlaneGeometry(15, 15);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x222233, roughness: 0.8, metalness: 0.2 });
+        const ground = new THREE.Mesh(groundGeom, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -0.01;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // ========== 人体模型构建 (同之前) ==========
+        const skinMat = new THREE.MeshStandardMaterial({ color: 0xffccaa, roughness: 0.55, metalness: 0.05 });
+        const jointMat = new THREE.MeshStandardMaterial({ color: 0x8899cc, roughness: 0.3, metalness: 0.4, emissive: 0x111122, emissiveIntensity: 0.3 });
+
+        function createBodyPart(radiusTop, radiusBottom, height, material, name) {
+            const geom = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 24);
+            const mesh = new THREE.Mesh(geom, material.clone());
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            mesh.name = name;
+            return mesh;
+        }
+        function createJoint(radius, material, name) {
+            const geom = new THREE.SphereGeometry(radius, 24, 16);
+            const mesh = new THREE.Mesh(geom, material.clone());
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            mesh.name = name;
+            return mesh;
+        }
+
+        const root = new THREE.Group();
+        root.name = 'root';
+        scene.add(root);
+
+        const pelvis = new THREE.Group();
+        pelvis.name = 'pelvis';
+        pelvis.position.set(0, 1.05, 0);
+        root.add(pelvis);
+        const pelvisMesh = new THREE.Mesh(new THREE.SphereGeometry(0.22, 20, 16).scale(1,0.8,0.7), jointMat.clone());
+        pelvisMesh.castShadow = true; pelvisMesh.receiveShadow = true;
+        pelvis.add(pelvisMesh);
+
+        const spineBase = new THREE.Group(); spineBase.name = 'spineBase'; spineBase.position.y = 0.18; pelvis.add(spineBase);
+        const spineGroup = new THREE.Group(); spineGroup.name = 'spineGroup'; spineGroup.position.y = 0; spineBase.add(spineGroup);
+        const spinePart = createBodyPart(0.12, 0.14, 0.45, skinMat, 'spine'); spinePart.position.y = 0.225; spineGroup.add(spinePart);
+
+        const chest = new THREE.Group(); chest.name = 'chest'; chest.position.y = 0.45; spineGroup.add(chest);
+        const chestMesh = new THREE.Mesh(new THREE.SphereGeometry(0.2, 20, 16).scale(1,0.9,0.65), skinMat.clone());
+        chestMesh.castShadow = true; chestMesh.receiveShadow = true; chest.add(chestMesh);
+
+        const neckBase = new THREE.Group(); neckBase.name = 'neckBase'; neckBase.position.y = 0.18; chest.add(neckBase);
+        const neckPart = createBodyPart(0.06, 0.07, 0.16, skinMat, 'neck'); neckPart.position.y = 0.08; neckBase.add(neckPart);
+        const head = new THREE.Group(); head.name = 'head'; head.position.y = 0.16; neckBase.add(head);
+        const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.13, 24, 20).scale(1,1.1,0.9), skinMat.clone());
+        headMesh.castShadow = true; headMesh.receiveShadow = true; head.add(headMesh);
+
+        // 四肢 (简化，保留之前的关节组)
+        const leftShoulderJoint = new THREE.Group(); leftShoulderJoint.position.set(0.22, 0.16, 0); chest.add(leftShoulderJoint);
+        const leftUpperArm = createBodyPart(0.06, 0.055, 0.38, skinMat, 'leftUpperArm'); leftUpperArm.position.y = -0.19; leftShoulderJoint.add(leftUpperArm);
+        const leftElbowJoint = new THREE.Group(); leftElbowJoint.position.y = -0.38; leftShoulderJoint.add(leftElbowJoint);
+        const leftForearm = createBodyPart(0.05, 0.04, 0.32, skinMat, 'leftForearm'); leftForearm.position.y = -0.16; leftElbowJoint.add(leftForearm);
+        const leftHand = createJoint(0.045, skinMat, 'leftHand'); leftHand.position.y = -0.32; leftElbowJoint.add(leftHand);
+
+        const rightShoulderJoint = new THREE.Group(); rightShoulderJoint.position.set(-0.22, 0.16, 0); chest.add(rightShoulderJoint);
+        const rightUpperArm = createBodyPart(0.06, 0.055, 0.38, skinMat, 'rightUpperArm'); rightUpperArm.position.y = -0.19; rightShoulderJoint.add(rightUpperArm);
+        const rightElbowJoint = new THREE.Group(); rightElbowJoint.position.y = -0.38; rightShoulderJoint.add(rightElbowJoint);
+        const rightForearm = createBodyPart(0.05, 0.04, 0.32, skinMat, 'rightForearm'); rightForearm.position.y = -0.16; rightElbowJoint.add(rightForearm);
+        const rightHand = createJoint(0.045, skinMat, 'rightHand'); rightHand.position.y = -0.32; rightElbowJoint.add(rightHand);
+
+        const leftHipJoint = new THREE.Group(); leftHipJoint.position.set(0.1, -0.08, 0); pelvis.add(leftHipJoint);
+        const leftThigh = createBodyPart(0.08, 0.07, 0.5, skinMat, 'leftThigh'); leftThigh.position.y = -0.25; leftHipJoint.add(leftThigh);
+        const leftKneeJoint = new THREE.Group(); leftKneeJoint.position.y = -0.5; leftHipJoint.add(leftKneeJoint);
+        const leftShin = createBodyPart(0.065, 0.055, 0.45, skinMat, 'leftShin'); leftShin.position.y = -0.225; leftKneeJoint.add(leftShin);
+        const leftFoot = new THREE.Group(); leftFoot.position.y = -0.45; leftKneeJoint.add(leftFoot);
+        const leftFootMesh = new THREE.Mesh(new THREE.BoxGeometry(0.07,0.06,0.16), skinMat.clone()); leftFootMesh.position.set(0,-0.02,0.04); leftFoot.add(leftFootMesh);
+
+        const rightHipJoint = new THREE.Group(); rightHipJoint.position.set(-0.1, -0.08, 0); pelvis.add(rightHipJoint);
+        const rightThigh = createBodyPart(0.08, 0.07, 0.5, skinMat, 'rightThigh'); rightThigh.position.y = -0.25; rightHipJoint.add(rightThigh);
+        const rightKneeJoint = new THREE.Group(); rightKneeJoint.position.y = -0.5; rightHipJoint.add(rightKneeJoint);
+        const rightShin = createBodyPart(0.065, 0.055, 0.45, skinMat, 'rightShin'); rightShin.position.y = -0.225; rightKneeJoint.add(rightShin);
+        const rightFoot = new THREE.Group(); rightFoot.position.y = -0.45; rightKneeJoint.add(rightFoot);
+        const rightFootMesh = new THREE.Mesh(new THREE.BoxGeometry(0.07,0.06,0.16), skinMat.clone()); rightFootMesh.position.set(0,-0.02,0.04); rightFoot.add(rightFootMesh);
+
+        // 存储关节引用
+        const jointGroups = {
+            neck: neckBase,
+            spine: spineGroup,
+            leftShoulder: leftShoulderJoint,
+            rightShoulder: rightShoulderJoint,
+            leftElbow: leftElbowJoint,
+            rightElbow: rightElbowJoint,
+            leftHip: leftHipJoint,
+            rightHip: rightHipJoint,
+            leftKnee: leftKneeJoint,
+            rightKnee: rightKneeJoint
+        };
+
+        // 关节配置
+        const jointConfigs = {
+            neck: { group: neckBase, axis: 'y', min: -60, max: 60, default: 0 },
+            spine: { group: spineGroup, axis: 'x', min: -35, max: 45, default: 0 },
+            leftShoulder: { group: leftShoulderJoint, axis: 'x', min: -180, max: 90, default: 0 },
+            rightShoulder: { group: rightShoulderJoint, axis: 'x', min: -90, max: 180, default: 0, invert: true },
+            leftElbow: { group: leftElbowJoint, axis: 'x', min: 0, max: 150, default: 10 },
+            rightElbow: { group: rightElbowJoint, axis: 'x', min: 0, max: 150, default: 10, invert: true },
+            leftHip: { group: leftHipJoint, axis: 'x', min: -90, max: 45, default: 0 },
+            rightHip: { group: rightHipJoint, axis: 'x', min: -45, max: 90, default: 0, invert: true },
+            leftKnee: { group: leftKneeJoint, axis: 'x', min: 0, max: 130, default: 5 },
+            rightKnee: { group: rightKneeJoint, axis: 'x', min: 0, max: 130, default: 5, invert: true }
+        };
+
+        const currentAngles = {};
+        for (let key in jointConfigs) currentAngles[key] = jointConfigs[key].default;
+
+        function applyJointRotation(name, angleDeg) {
+            const cfg = jointConfigs[name];
+            const rad = THREE.MathUtils.degToRad(angleDeg * (cfg.invert ? -1 : 1));
+            cfg.group.rotation.set(0,0,0);
+            if(cfg.axis === 'x') cfg.group.rotation.x = rad;
+            if(cfg.axis === 'y') cfg.group.rotation.y = rad;
+            if(cfg.axis === 'z') cfg.group.rotation.z = rad;
+        }
+
+        // ========== 肌肉线框 (简化示意) ==========
+        const muscleLines = new THREE.Group();
+        muscleLines.visible = false;
+        scene.add(muscleLines);
+        function createMuscleLine(points, color=0xff6633) {
+            const geom = new THREE.BufferGeometry().setFromPoints(points);
+            const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.5 });
+            const line = new THREE.Line(geom, mat);
+            muscleLines.add(line);
+        }
+        // 胸大肌示意
+        createMuscleLine([new THREE.Vector3(0.1,1.8,0.15), new THREE.Vector3(0.0,1.7,0.22)], 0xff8866);
+        // 腹直肌
+        createMuscleLine([new THREE.Vector3(0.05,1.55,0.1), new THREE.Vector3(0.05,1.35,0.12)], 0xffaa66);
+        // 肱二头肌左
+        createMuscleLine([new THREE.Vector3(0.3,1.65,0), new THREE.Vector3(0.32,1.45,0)], 0xff6644);
+        // 股四头肌左
+        createMuscleLine([new THREE.Vector3(0.15,0.85,0), new THREE.Vector3(0.14,0.6,0)], 0xff6644);
+        // 镜像右边略
+
+        window.toggleMuscle = function() {
+            muscleLines.visible = !muscleLines.visible;
+            document.getElementById('toggle-muscle').classList.toggle('active', muscleLines.visible);
+        };
+
+        // ========== 动态生成控制面板 ==========
+        const container = document.getElementById('controls-container');
+        const jointNames = ['neck','spine','leftShoulder','rightShoulder','leftElbow','rightElbow','leftHip','rightHip','leftKnee','rightKnee'];
+        jointNames.forEach(name => {
+            const cfg = jointConfigs[name];
+            const div = document.createElement('div');
+            div.className = 'control-group';
+            div.innerHTML = `
+                <label>${name} <button class="reset-single" data-joint="${name}">↺</button></label>
+                <div class="range-row">
+                    <input type="range" id="${name}" min="${cfg.min}" max="${cfg.max}" value="${cfg.default}" step="1">
+                    <span class="value-display" id="val-${name}">${cfg.default}°</span>
+                    <div class="micro-btns">
+                        <button class="micro-minus" data-joint="${name}">−</button>
+                        <button class="micro-plus" data-joint="${name}">+</button>
+                    </div>
+                </div>
+                <div class="range-indicator">
+                    <span>${cfg.min}</span><div class="bar"><div class="dot" id="dot-${name}"></div></div><span>${cfg.max}</span>
+                </div>
+                <div class="limit-warning" id="warn-${name}">⚠ 已达极限</div>
+            `;
+            container.appendChild(div);
+
+            const slider = div.querySelector('input');
+            const valDisp = div.querySelector('.value-display');
+            const warnEl = div.querySelector('.limit-warning');
+            const dot = div.querySelector('.dot');
+
+            slider.addEventListener('input', () => {
+                let val = parseInt(slider.value);
+                val = Math.max(cfg.min, Math.min(cfg.max, val));
+                slider.value = val;
+                currentAngles[name] = val;
+                valDisp.textContent = val + '°';
+                applyJointRotation(name, val);
+                const atLimit = (val <= cfg.min || val >= cfg.max);
+                warnEl.classList.toggle('active', atLimit);
+                const percent = (val - cfg.min) / (cfg.max - cfg.min) * 100;
+                dot.style.left = percent + '%';
+            });
+
+            // 微调按钮
+            div.querySelector('.micro-plus').addEventListener('click', (e) => {
+                e.stopPropagation();
+                let val = parseInt(slider.value) + 1;
+                if(val > cfg.max) val = cfg.max;
+                slider.value = val;
+                slider.dispatchEvent(new Event('input'));
+            });
+            div.querySelector('.micro-minus').addEventListener('click', (e) => {
+                e.stopPropagation();
+                let val = parseInt(slider.value) - 1;
+                if(val < cfg.min) val = cfg.min;
+                slider.value = val;
+                slider.dispatchEvent(new Event('input'));
+            });
+
+            // 单关节重置
+            div.querySelector('.reset-single').addEventListener('click', (e) => {
+                e.stopPropagation();
+                slider.value = cfg.default;
+                slider.dispatchEvent(new Event('input'));
+            });
+        });
+
+        // ========== 姿态保存/加载 ==========
+        const poseListEl = document.getElementById('pose-list');
+        function loadPoses() {
+            const data = localStorage.getItem('bodyPoses');
+            return data ? JSON.parse(data) : [];
+        }
+        function savePoses(poses) { localStorage.setItem('bodyPoses', JSON.stringify(poses)); }
+        function renderPoseList() {
+            const poses = loadPoses();
+            poseListEl.innerHTML = poses.map((p,i) => `
+                <div class="pose-item">
+                    <span class="pose-name">${p.name}</span>
+                    <button onclick="deletePose(${i})">删除</button>
+                    <button onclick="loadPose(${i})">加载</button>
+                </div>
+            `).join('');
+        }
+        window.deletePose = (i) => { const poses = loadPoses(); poses.splice(i,1); savePoses(poses); renderPoseList(); };
+        window.loadPose = (i) => {
+            const poses = loadPoses();
+            const angles = poses[i].angles;
+            for(let name in angles) {
+                const slider = document.getElementById(name);
+                if(slider) { slider.value = angles[name]; slider.dispatchEvent(new Event('input')); }
+            }
+        };
+        document.getElementById('btn-save-pose').addEventListener('click', () => {
+            const name = document.getElementById('pose-name').value.trim() || '未命名';
+            const poses = loadPoses();
+            poses.push({ name, angles: {...currentAngles} });
+            savePoses(poses);
+            renderPoseList();
+            document.getElementById('pose-name').value = '';
+        });
+        renderPoseList();
+
+        // ========== 动画系统 ==========
+        let walkAnimId = null;
+        let walkTime = 0;
+        const animSpeedSlider = document.getElementById('anim-speed');
+        const animSpeedVal = document.getElementById('anim-speed-val');
+        animSpeedSlider.addEventListener('input', () => { animSpeedVal.textContent = parseFloat(animSpeedSlider.value).toFixed(1) + 'x'; });
+
+        function stopWalk() {
+            if(walkAnimId) cancelAnimationFrame(walkAnimId);
+            walkAnimId = null;
+        }
+        function startWalk() {
+            if(walkAnimId) { stopWalk(); return; }
+            walkTime = 0;
+            function step(ts) {
+                const speed = parseFloat(animSpeedSlider.value);
+                walkTime += 0.02 * speed;
+                const amp = 25;
+                const shoulderAmp = 30;
+                const kneeAmp = 20;
+                const lShoulder = Math.sin(walkTime) * shoulderAmp;
+                const rShoulder = -Math.sin(walkTime) * shoulderAmp;
+                const lHip = -Math.sin(walkTime) * amp;
+                const rHip = Math.sin(walkTime) * amp;
+                const lKnee = Math.abs(Math.sin(walkTime)) * kneeAmp + 5;
+                const rKnee = Math.abs(Math.sin(walkTime + Math.PI)) * kneeAmp + 5;
+                setSliderValue('leftShoulder', lShoulder);
+                setSliderValue('rightShoulder', rShoulder);
+                setSliderValue('leftHip', lHip);
+                setSliderValue('rightHip', rHip);
+                setSliderValue('leftKnee', lKnee);
+                setSliderValue('rightKnee', rKnee);
+                walkAnimId = requestAnimationFrame(step);
+            }
+            walkAnimId = requestAnimationFrame(step);
+        }
+        function setSliderValue(name, val) {
+            const slider = document.getElementById(name);
+            if(!slider) return;
+            const cfg = jointConfigs[name];
+            val = Math.round(Math.max(cfg.min, Math.min(cfg.max, val)));
+            slider.value = val;
+            slider.dispatchEvent(new Event('input'));
+        }
+        document.getElementById('btn-walk').addEventListener('click', startWalk);
+
+        // 全局按钮
+        document.getElementById('btn-reset-all').addEventListener('click', () => {
+            for(let name in jointConfigs) {
+                const slider = document.getElementById(name);
+                if(slider) { slider.value = jointConfigs[name].default; slider.dispatchEvent(new Event('input')); }
+            }
+        });
+        document.getElementById('btn-tpose').addEventListener('click', () => {
+            setSliderValue('leftShoulder', -90);
+            setSliderValue('rightShoulder', 90);
+            setSliderValue('leftElbow', 0);
+            setSliderValue('rightElbow', 0);
+            setSliderValue('leftKnee', 0);
+            setSliderValue('rightKnee', 0);
+        });
+        document.getElementById('btn-apose').addEventListener('click', () => {
+            setSliderValue('leftShoulder', -25);
+            setSliderValue('rightShoulder', 25);
+            setSliderValue('leftElbow', 15);
+            setSliderValue('rightElbow', 15);
+            setSliderValue('leftHip', -8);
+            setSliderValue('rightHip', 8);
+        });
+
+        // 动画循环
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        console.log('🦴 平板优化人体模型已启动！');
+    </script>
+</body>
+</html>
