@@ -12,6 +12,14 @@ const works = [
     date: "2026-05-30",
     href: "works/blackhole.html"
   }
+  {
+    id: "human-model",
+    title: "人体模型",
+    desc: "交互式 3D 人体模型展示",
+    tags: ["visual", "interactive", "html"],
+    date: "2026-05-30",
+    href: "works/人体模型.html"
+  },
   // ─────────────────────────────────────────────────────────────
   // 📌 添加新作品示例（复制下面取消注释即可）：
   //
