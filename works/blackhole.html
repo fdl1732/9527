@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌀 移动黑洞吞噬·大粒+快粒 | 老细专用</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000005; overflow: hidden; cursor: none; font-family: 'Courier New', monospace; }
+        canvas { display: block; }
+        .info {
+            position: fixed; bottom: 25px; left: 25px;
+            color: rgba(200, 180, 255, 0.8); font-size: 13px; letter-spacing: 1px;
+            z-index: 10; pointer-events: none; text-shadow: 0 0 12px rgba(150, 0, 255, 0.7); user-select: none;
+        }
+        .info span { color: #ff8800; text-shadow: 0 0 18px #ff6600; }
+        .stats {
+            position: fixed; top: 20px; right: 25px;
+            color: rgba(255, 200, 150, 0.9); font-size: 12px; letter-spacing: 1px;
+            z-index: 10; pointer-events: none; text-shadow: 0 0 8px rgba(255, 120, 0, 0.6);
+            text-align: right; user-select: none; line-height: 1.6;
+        }
+        .stats strong { color: #ffcc00; font-size: 15px; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="info">
+        🌀 移动黑洞 // <span>大粒重物·快粒光子</span><br>
+        粒子数: <strong id="count">0</strong>
+    </div>
+    <div class="stats">
+        吞噬: <strong id="swallowed">0</strong><br>
+        速度: <strong id="speed">0</strong> px/s
+    </div>
+
+    <script>
+        (() => {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            const countEl = document.getElementById('count');
+            const swallowedEl = document.getElementById('swallowed');
+            const speedEl = document.getElementById('speed');
+
+            let width, height;
+            let bhX, bhY;
+            let targetX, targetY;
+            let prevBhX, prevBhY;
+            let bhSpeed = 0;
+
+            let particles = [];
+            let photonParticles = [];
+            let backgroundStars = [];
+            const PARTICLE_COUNT = 600;           // 总数稍增以容纳更多类型
+            const PHOTON_COUNT = 25;
+            const BACKGROUND_STAR_COUNT = 250;
+
+            const BH_EVENT_HORIZON = 38;
+            const BH_ACCRETION_INNER = 65;
+            const BH_ACCRETION_OUTER = 200;
+            const GRAVITY_STRENGTH = 0.22;
+            const LERP_FACTOR = 0.07;
+
+            let mouseX = -999, mouseY = -999;
+            let mouseOnScreen = false;
+            let swallowedCount = 0;
+            let time = 0;
+
+            // ---------- 背景繁星 ----------
+            class BackgroundStar {
+                constructor() { this.reset(); }
+                reset() {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                    this.size = Math.random() * 1.5 + 0.3;
+                    this.baseAlpha = Math.random() * 0.7 + 0.2;
+                    this.twinkleSpeed = Math.random() * 0.03 + 0.008;
+                    this.twinkleOffset = Math.random() * Math.PI * 2;
+                    const r = Math.random();
+                    if (r < 0.7) { this.r = 255; this.g = 255; this.b = 255; }
+                    else if (r < 0.85) { this.r = 180; this.g = 200; this.b = 255; }
+                    else { this.r = 255; this.g = 220; this.b = 160; }
+                }
+                update(time) {
+                    this.currentAlpha = this.baseAlpha * (0.5 + 0.5 * Math.sin(time * this.twinkleSpeed + this.twinkleOffset));
+                }
+                draw(ctx) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${this.r},${this.g},${this.b},${this.currentAlpha})`;
+                    ctx.fill();
+                }
+            }
+
+            // ---------- 多类型粒子 ----------
+            class Particle {
+                constructor() {
+                    this.type = null;  // 首次分配类型
+                    this.reset(true);
+                }
+
+                reset(initial = false) {
+                    // 首次分配类型 (normal / large / fast)
+                    if (!this.type) {
+                        const rand = Math.random();
+                        if (rand < 0.18) this.type = 'large';
+                        else if (rand < 0.36) this.type = 'fast';
+                        else this.type = 'normal';
+                    }
+
+                    // 根据类型设定距离范围
+                    let distMin, distMax;
+                    if (this.type === 'large') {
+                        distMin = BH_ACCRETION_OUTER + 60;
+                        distMax = Math.max(width, height) * 0.65;
+                    } else if (this.type === 'fast') {
+                        distMin = BH_ACCRETION_INNER + 10;
+                        distMax = BH_ACCRETION_OUTER + 50;
+                    } else {
+                        distMin = BH_ACCRETION_OUTER + 20;
+                        distMax = Math.max(width, height) * 0.55;
+                    }
+
+                    if (initial) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const dist = distMin + Math.random() * (distMax - distMin);
+                        this.x = bhX + Math.cos(angle) * dist;
+                        this.y = bhY + Math.sin(angle) * dist;
+                    } else {
+                        const angle = Math.random() * Math.PI * 2;
+                        const dist = distMin + Math.random() * (distMax - distMin);
+                        this.x = bhX + Math.cos(angle) * dist;
+                        this.y = bhY + Math.sin(angle) * dist;
+                    }
+
+                    // 速度初始化
+                    const dx = this.x - bhX;
+                    const dy = this.y - bhY;
+                    const distToBH = Math.sqrt(dx * dx + dy * dy);
+                    const angleToBH = Math.atan2(dy, dx);
+                    const tangentDir = Math.random() > 0.5 ? 1 : -1;
+                    let baseOrbital = Math.sqrt(GRAVITY_STRENGTH * 250 / Math.max(distToBH, 20));
+                    if (this.type === 'fast') baseOrbital *= 1.5 + Math.random() * 1.0;
+                    else if (this.type === 'large') baseOrbital *= 0.5 + Math.random() * 0.4;
+                    else baseOrbital *= 0.5 + Math.random() * 0.9;
+                    this.vx = Math.cos(angleToBH + Math.PI / 2 * tangentDir) * baseOrbital + (Math.random() - 0.5) * 1.0;
+                    this.vy = Math.sin(angleToBH + Math.PI / 2 * tangentDir) * baseOrbital + (Math.random() - 0.5) * 1.0;
+
+                    // 视觉属性
+                    if (this.type === 'large') {
+                        this.size = 2.5 + Math.random() * 3.0;   // 大粒 2.5~5.5
+                        this.hue = 15 + Math.random() * 25;       // 橙红
+                        this.saturation = 85 + Math.random() * 15;
+                        this.lightness = 55 + Math.random() * 25;
+                        this.alpha = 0.8 + Math.random() * 0.2;
+                        this.maxTrail = 14 + Math.floor(Math.random() * 8);
+                    } else if (this.type === 'fast') {
+                        this.size = 0.4 + Math.random() * 0.9;   // 细粒高速
+                        this.hue = 185 + Math.random() * 40;      // 青蓝
+                        this.saturation = 80 + Math.random() * 20;
+                        this.lightness = 60 + Math.random() * 30;
+                        this.alpha = 0.75 + Math.random() * 0.25;
+                        this.maxTrail = 3 + Math.floor(Math.random() * 4);
+                    } else {
+                        this.size = 0.7 + Math.random() * 1.8;
+                        this.hue = 210 + Math.random() * 50;
+                        this.saturation = 70 + Math.random() * 30;
+                        this.lightness = 45 + Math.random() * 35;
+                        this.alpha = 0.7 + Math.random() * 0.25;
+                        this.maxTrail = 6 + Math.floor(Math.random() * 7);
+                    }
+                    this.trail = [];
+                }
+
+                update() {
+                    const dx = bhX - this.x;
+                    const dy = bhY - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const angleToBH = Math.atan2(dy, dx);
+
+                    const gravityAcc = GRAVITY_STRENGTH * 600 / Math.max(dist * dist, 300);
+                    this.vx += Math.cos(angleToBH) * gravityAcc;
+                    this.vy += Math.sin(angleToBH) * gravityAcc;
+
+                    // 类型相关阻尼与极速
+                    let maxSpeed;
+                    if (this.type === 'large') {
+                        this.vx *= 0.995;
+                        this.vy *= 0.995;
+                        maxSpeed = 4.5;
+                    } else if (this.type === 'fast') {
+                        maxSpeed = 14;
+                    } else {
+                        maxSpeed = 8;
+                    }
+                    const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                    if (speed > maxSpeed) {
+                        const scale = maxSpeed / speed;
+                        this.vx *= scale;
+                        this.vy *= scale;
+                    }
+
+                    this.x += this.vx;
+                    this.y += this.vy;
+
+                    this.trail.push({ x: this.x, y: this.y });
+                    if (this.trail.length > this.maxTrail) this.trail.shift();
+
+                    if (dist < BH_EVENT_HORIZON) {
+                        swallowedCount++;
+                        swallowedEl.textContent = swallowedCount;
+                        this.reset(false);
+                        return true;
+                    }
+                    const maxDist = Math.max(width, height) * 0.9;
+                    if (dist > maxDist) {
+                        this.reset(false);
+                    }
+
+                    // 动态颜色：靠近吸积盘变暖
+                    if (this.type !== 'large' && this.type !== 'fast') {
+                        if (dist < BH_ACCRETION_OUTER) {
+                            const t = 1 - Math.max(0, (dist - BH_ACCRETION_INNER)) / (BH_ACCRETION_OUTER - BH_ACCRETION_INNER);
+                            this.hue = 25 + t * 20;
+                            this.saturation = 85 + t * 15;
+                            this.lightness = 50 + t * 35;
+                        } else {
+                            this.hue = 210 + Math.random() * 50;
+                            this.saturation = 70 + Math.random() * 25;
+                            this.lightness = 45 + Math.random() * 30;
+                        }
+                    }
+                    return false;
+                }
+
+                draw(ctx) {
+                    const [r, g, b] = hslToRgb(this.hue, this.saturation, this.lightness);
+                    // 拖尾
+                    if (this.trail.length > 1) {
+                        for (let i = 0; i < this.trail.length - 1; i++) {
+                            const p = this.trail[i];
+                            const np = this.trail[i + 1];
+                            const progress = i / this.trail.length;
+                            ctx.beginPath();
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(np.x, np.y);
+                            ctx.strokeStyle = `rgba(${r},${g},${b},${this.alpha * progress * 0.5})`;
+                            ctx.lineWidth = this.size * progress * 0.8;
+                            ctx.lineCap = 'round';
+                            ctx.stroke();
+                        }
+                    }
+                    // 光晕
+                    const glowSize = this.size * (this.type === 'large' ? 3.5 : 2.8);
+                    const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, glowSize);
+                    gradient.addColorStop(0, `rgba(${r},${g},${b},${this.alpha * 0.9})`);
+                    gradient.addColorStop(1, `rgba(${r},${g},${b},0)`);
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, glowSize, 0, Math.PI * 2);
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+                    // 核心亮点 (大粒子核心更强)
+                    const coreSize = this.type === 'large' ? this.size * 0.8 : this.size * 0.5;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, coreSize, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255,255,255,${this.alpha * 0.9})`;
+                    ctx.fill();
+                }
+            }
+
+            // ---------- 光子粒子（保持不变） ----------
+            class PhotonParticle {
+                constructor() { this.reset(); }
+                reset() {
+                    this.angle = Math.random() * Math.PI * 2;
+                    this.orbitRadius = BH_EVENT_HORIZON * 1.35 + Math.random() * 8;
+                    this.orbitalSpeed = 0.06 + Math.random() * 0.08;
+                    this.size = 0.4 + Math.random() * 1.0;
+                    this.alpha = 0.6 + Math.random() * 0.4;
+                    this.hue = 35 + Math.random() * 20;
+                }
+                update() {
+                    this.angle += this.orbitalSpeed;
+                    this.x = bhX + Math.cos(this.angle) * this.orbitRadius;
+                    this.y = bhY + Math.sin(this.angle) * this.orbitRadius;
+                }
+                draw(ctx) {
+                    const [r, g, b] = hslToRgb(this.hue, 95, 70);
+                    const glow = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size * 4);
+                    glow.addColorStop(0, `rgba(255,255,220,${this.alpha})`);
+                    glow.addColorStop(0.4, `rgba(${r},${g},${b},${this.alpha * 0.6})`);
+                    glow.addColorStop(1, `rgba(${r},${g},${b},0)`);
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size * 4, 0, Math.PI * 2);
+                    ctx.fillStyle = glow;
+                    ctx.fill();
+                }
+            }
+
+            function hslToRgb(h, s, l) {
+                h /= 360; s /= 100; l /= 100;
+                let r, g, b;
+                if (s === 0) { r = g = b = l; }
+                else {
+                    const hue2rgb = (p, q, t) => {
+                        if (t < 0) t += 1;
+                        if (t > 1) t -= 1;
+                        if (t < 1/6) return p + (q - p) * 6 * t;
+                        if (t < 1/2) return q;
+                        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                        return p;
+                    };
+                    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                    const p = 2 * l - q;
+                    r = hue2rgb(p, q, h + 1/3);
+                    g = hue2rgb(p, q, h);
+                    b = hue2rgb(p, q, h - 1/3);
+                }
+                return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+            }
+
+            function drawBlackHole(timestamp) {
+                const x = bhX, y = bhY;
+                const rotation = timestamp * 0.001;
+                // 弥漫光晕
+                const outerGlow = ctx.createRadialGradient(x, y, BH_ACCRETION_INNER * 0.7, x, y, BH_ACCRETION_OUTER * 1.3);
+                outerGlow.addColorStop(0, 'rgba(255, 100, 20, 0.25)');
+                outerGlow.addColorStop(0.5, 'rgba(180, 50, 10, 0.1)');
+                outerGlow.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.beginPath(); ctx.arc(x, y, BH_ACCRETION_OUTER * 1.3, 0, Math.PI * 2);
+                ctx.fillStyle = outerGlow; ctx.fill();
+
+                // 吸积盘
+                ctx.save(); ctx.translate(x, y); ctx.rotate(rotation); ctx.scale(1, 0.28);
+                const diskGrad = ctx.createRadialGradient(0, 0, BH_ACCRETION_INNER, 0, 0, BH_ACCRETION_OUTER);
+                diskGrad.addColorStop(0, 'rgba(255, 150, 30, 0.75)');
+                diskGrad.addColorStop(0.35, 'rgba(255, 80, 10, 0.55)');
+                diskGrad.addColorStop(0.65, 'rgba(200, 30, 0, 0.25)');
+                diskGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.beginPath(); ctx.arc(0, 0, BH_ACCRETION_OUTER, 0, Math.PI * 2);
+                ctx.fillStyle = diskGrad; ctx.fill();
+                ctx.beginPath(); ctx.arc(0, 0, BH_ACCRETION_INNER, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255, 200, 80, 0.6)'; ctx.lineWidth = 4; ctx.stroke();
+                ctx.restore();
+
+                // 光子环
+                const photonRadius = BH_EVENT_HORIZON * 1.38;
+                ctx.beginPath(); ctx.arc(x, y, photonRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255, 210, 120, 0.8)'; ctx.lineWidth = 2.5;
+                ctx.shadowColor = 'rgba(255, 180, 60, 0.9)'; ctx.shadowBlur = 12; ctx.stroke();
+                ctx.shadowBlur = 0;
+                const photonGlow = ctx.createRadialGradient(x, y, photonRadius - 3, x, y, photonRadius + 10);
+                photonGlow.addColorStop(0, 'rgba(255, 190, 70, 0.55)');
+                photonGlow.addColorStop(1, 'rgba(255, 150, 40, 0)');
+                ctx.beginPath(); ctx.arc(x, y, photonRadius + 10, 0, Math.PI * 2);
+                ctx.fillStyle = photonGlow; ctx.fill();
+
+                // 事件视界
+                const ehGrad = ctx.createRadialGradient(x, y, BH_EVENT_HORIZON * 0.7, x, y, BH_EVENT_HORIZON);
+                ehGrad.addColorStop(0, 'rgba(0,0,0,1)');
+                ehGrad.addColorStop(0.9, 'rgba(2,0,5,0.95)');
+                ehGrad.addColorStop(1, 'rgba(15,0,25,0.6)');
+                ctx.beginPath(); ctx.arc(x, y, BH_EVENT_HORIZON, 0, Math.PI * 2);
+                ctx.fillStyle = ehGrad; ctx.fill();
+                ctx.beginPath(); ctx.arc(x, y, BH_EVENT_HORIZON, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(60, 5, 10, 0.7)'; ctx.lineWidth = 2; ctx.stroke();
+
+                // 中心微亮
+                const coreGlow = ctx.createRadialGradient(x, y, 0, x, y, BH_EVENT_HORIZON * 0.4);
+                coreGlow.addColorStop(0, 'rgba(40,10,60,0.6)'); coreGlow.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.beginPath(); ctx.arc(x, y, BH_EVENT_HORIZON * 0.4, 0, Math.PI * 2);
+                ctx.fillStyle = coreGlow; ctx.fill();
+            }
+
+            function drawGravLensing() {
+                const x = bhX, y = bhY;
+                const lensRadius = BH_EVENT_HORIZON * 2.0;
+                for (let i = 0; i < 6; i++) {
+                    const arcAngle = (i / 6) * Math.PI * 2 + time * 0.0003;
+                    const arcLength = 0.4 + Math.sin(i * 1.7) * 0.2;
+                    ctx.beginPath(); ctx.arc(x, y, lensRadius, arcAngle, arcAngle + arcLength);
+                    ctx.strokeStyle = 'rgba(180,200,255,0.15)'; ctx.lineWidth = 1; ctx.stroke();
+                }
+            }
+
+            function init() {
+                bhX = width / 2; bhY = height / 2;
+                targetX = bhX; targetY = bhY;
+                prevBhX = bhX; prevBhY = bhY;
+
+                particles = [];
+                for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
+                photonParticles = [];
+                for (let i = 0; i < PHOTON_COUNT; i++) photonParticles.push(new PhotonParticle());
+                backgroundStars = [];
+                for (let i = 0; i < BACKGROUND_STAR_COUNT; i++) backgroundStars.push(new BackgroundStar());
+                countEl.textContent = PARTICLE_COUNT;
+                swallowedCount = 0;
+                swallowedEl.textContent = '0';
+            }
+
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+                if (bhX < -100 || bhX > width + 100 || bhY < -100 || bhY > height + 100) {
+                    bhX = width / 2; bhY = height / 2; targetX = bhX; targetY = bhY;
+                }
+                for (let star of backgroundStars) star.reset();
+            }
+
+            function onMouseMove(e) {
+                mouseX = e.clientX; mouseY = e.clientY; mouseOnScreen = true;
+                targetX = mouseX; targetY = mouseY;
+            }
+            function onMouseLeave() { mouseOnScreen = false; targetX = width / 2; targetY = height / 2; }
+            function onMouseEnter(e) {
+                mouseX = e.clientX; mouseY = e.clientY; mouseOnScreen = true;
+                targetX = mouseX; targetY = mouseY;
+            }
+            function onTouchMove(e) {
+                e.preventDefault();
+                mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY;
+                mouseOnScreen = true; targetX = mouseX; targetY = mouseY;
+            }
+            function onTouchStart(e) {
+                e.preventDefault();
+                mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY;
+                mouseOnScreen = true; targetX = mouseX; targetY = mouseY;
+            }
+            function onTouchEnd(e) { e.preventDefault(); mouseOnScreen = false; targetX = width / 2; targetY = height / 2; }
+
+            function animate(timestamp) {
+                time = timestamp;
+                prevBhX = bhX; prevBhY = bhY;
+                bhX += (targetX - bhX) * LERP_FACTOR;
+                bhY += (targetY - bhY) * LERP_FACTOR;
+                const dx = bhX - prevBhX, dy = bhY - prevBhY;
+                bhSpeed = Math.sqrt(dx * dx + dy * dy) / 0.016;
+                speedEl.textContent = Math.round(bhSpeed);
+
+                ctx.fillStyle = 'rgba(0, 0, 5, 0.18)';
+                ctx.fillRect(0, 0, width, height);
+
+                for (let star of backgroundStars) { star.update(time); star.draw(ctx); }
+                drawGravLensing();
+
+                for (let p of particles) { p.update(); p.draw(ctx); }
+                for (let pp of photonParticles) { pp.update(); pp.draw(ctx); }
+
+                drawBlackHole(timestamp);
+
+                if (mouseOnScreen) {
+                    const distToBH = Math.sqrt((mouseX - bhX) ** 2 + (mouseY - bhY) ** 2);
+                    if (distToBH > 15) {
+                        const cursorGlow = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 10);
+                        cursorGlow.addColorStop(0, 'rgba(255,255,255,0.6)');
+                        cursorGlow.addColorStop(1, 'rgba(255,255,255,0)');
+                        ctx.beginPath(); ctx.arc(mouseX, mouseY, 10, 0, Math.PI * 2);
+                        ctx.fillStyle = cursorGlow; ctx.fill();
+                        ctx.beginPath(); ctx.moveTo(mouseX, mouseY); ctx.lineTo(bhX, bhY);
+                        ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.setLineDash([4, 8]);
+                        ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]);
+                    }
+                }
+
+                if (bhSpeed > 80) {
+                    const trailAngle = Math.atan2(bhY - prevBhY, bhX - prevBhX);
+                    const trailX = bhX - Math.cos(trailAngle) * bhSpeed * 0.03;
+                    const trailY = bhY - Math.sin(trailAngle) * bhSpeed * 0.03;
+                    const trailGlow = ctx.createRadialGradient(trailX, trailY, BH_EVENT_HORIZON * 0.5, trailX, trailY, BH_EVENT_HORIZON * 1.8);
+                    trailGlow.addColorStop(0, 'rgba(100,50,200,0.2)'); trailGlow.addColorStop(1, 'rgba(0,0,0,0)');
+                    ctx.beginPath(); ctx.arc(trailX, trailY, BH_EVENT_HORIZON * 1.8, 0, Math.PI * 2);
+                    ctx.fillStyle = trailGlow; ctx.fill();
+                }
+
+                requestAnimationFrame(animate);
+            }
+
+            resize();
+            init();
+            window.addEventListener('resize', resize);
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseleave', onMouseLeave);
+            window.addEventListener('mouseenter', onMouseEnter);
+            window.addEventListener('touchmove', onTouchMove, { passive: false });
+            window.addEventListener('touchstart', onTouchStart, { passive: false });
+            window.addEventListener('touchend', onTouchEnd);
+            requestAnimationFrame(animate);
+
+            console.log('%c🌀 大粒·快粒黑洞吞噬已启动 | 老细，睇下重粒子同快光子%c⚡',
+                'color: #ffaa00; font-size: 16px;', 'color: cyan;');
+        })();
+    </script>
+</body>
+</html>
