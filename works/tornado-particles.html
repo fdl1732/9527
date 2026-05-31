@@ -3,49 +3,38 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>龙卷风粒子漩涡</title>
+    <title>超炫龙卷风粒子</title>
     <style>
         * { margin: 0; padding: 0; }
-        body { overflow: hidden; background: #000; font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif; }
+        body { overflow: hidden; background: #000; font-family: 'Microsoft YaHei', sans-serif; }
         canvas { display: block; }
 
         .info {
             position: fixed;
-            bottom: 28px;
+            bottom: 26px;
             left: 50%;
             transform: translateX(-50%);
-            color: rgba(255, 255, 255, 0.45);
+            color: rgba(255,255,255,0.50);
             font-size: 14px;
-            letter-spacing: 1px;
             pointer-events: none;
             text-align: center;
-            text-shadow: 0 0 20px rgba(0,0,0,0.9);
+            text-shadow: 0 0 30px rgba(0,0,0,0.95);
             user-select: none;
-            background: rgba(0,0,0,0.3);
-            padding: 8px 20px;
+            background: rgba(0,0,0,0.35);
+            padding: 8px 22px;
             border-radius: 20px;
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255,255,255,0.06);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,0.08);
+            white-space: nowrap;
+            letter-spacing: 0.5px;
         }
-
-        .title {
-            position: fixed;
-            top: 28px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: rgba(255, 255, 255, 0.20);
-            font-size: 13px;
-            letter-spacing: 4px;
-            pointer-events: none;
-            text-align: center;
-            user-select: none;
-        }
+        .info span { display: inline-block; animation: pulseInfo 2.5s ease-in-out infinite; }
+        @keyframes pulseInfo { 0%,100%{opacity:0.5} 50%{opacity:1} }
     </style>
 </head>
 <body>
 
-    <div class="title">✦ 粒子龙卷风 ✦</div>
-    <div class="info">🖱 拖拽旋转 &nbsp;·&nbsp; 滚轮缩放</div>
+    <div class="info"><span>🖱 拖拽旋转</span> <span style="opacity:0.4;">·</span> <span>滚轮缩放</span> <span style="opacity:0.4;">·</span> <span>␣ 自动旋转</span></div>
 
     <script type="importmap">
         {
@@ -60,412 +49,323 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // ─── Scene ───────────────────────────────────────────────────────────────
+        // ══════════════════════════════════════════════════════════════════════════
+        //  SCENE
+        // ══════════════════════════════════════════════════════════════════════════
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x05070f);
-        // subtle fog for depth
-        scene.fog = new THREE.FogExp2(0x05070f, 0.004);
+        scene.background = new THREE.Color(0x02040a);
+        scene.fog = new THREE.FogExp2(0x02040a, 0.0025);
 
-        // ─── Camera ──────────────────────────────────────────────────────────────
-        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 500);
-        camera.position.set(9, 7, 9);
+        const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 800);
+        camera.position.set(14, 9, 14);
 
-        // ─── Renderer ────────────────────────────────────────────────────────────
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.2;
+        renderer.toneMappingExposure = 1.4;
         document.body.appendChild(renderer.domElement);
 
-        // ─── Controls ────────────────────────────────────────────────────────────
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.06;
-        controls.minDistance = 2.5;
-        controls.maxDistance = 45;
-        controls.target.set(0, 5.5, 0);
+        controls.minDistance = 4;
+        controls.maxDistance = 60;
+        controls.target.set(0, 6.5, 0);
         controls.autoRotate = true;
-        controls.autoRotateSpeed = 0.8;
+        controls.autoRotateSpeed = 0.7;
         controls.update();
 
-        // ─── Clock ───────────────────────────────────────────────────────────────
         const clock = new THREE.Clock();
 
         // ══════════════════════════════════════════════════════════════════════════
-        //  STARFIELD
+        //  STARFIELD  —  更多星辰 + 彩色星 + 呼吸闪烁
         // ══════════════════════════════════════════════════════════════════════════
-
         function createStarfield() {
-            const group = new THREE.Group();
+            const g = new THREE.Group();
 
-            // --- white stars (small, numerous) ---
-            const smallCount = 2500;
-            const g1 = new THREE.BufferGeometry();
-            const p1 = new Float32Array(smallCount * 3);
-            const s1 = new Float32Array(smallCount);
-            for (let i = 0; i < smallCount; i++) {
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.acos(2 * Math.random() - 1);
-                const r = 80 + Math.random() * 120;
-                p1[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
-                p1[i * 3 + 1] = r * Math.cos(phi);
-                p1[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
-                s1[i] = 0.15 + Math.random() * 0.35;
+            // white stars (tiny)
+            const wCount = 5000;
+            const gw = new THREE.BufferGeometry();
+            const pw = new Float32Array(wCount * 3);
+            const sw = new Float32Array(wCount);
+            for (let i = 0; i < wCount; i++) {
+                const th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
+                const r = 100 + Math.random() * 300;
+                pw[i*3]=r*Math.sin(ph)*Math.cos(th); pw[i*3+1]=r*Math.cos(ph); pw[i*3+2]=r*Math.sin(ph)*Math.sin(th);
+                sw[i] = 0.1 + Math.random() * 0.4;
             }
-            g1.setAttribute('position', new THREE.BufferAttribute(p1, 3));
-            g1.setAttribute('size', new THREE.BufferAttribute(s1, 1));
-
-            const m1 = new THREE.ShaderMaterial({
-                uniforms: { uTime: { value: 0 } },
+            gw.setAttribute('position', new THREE.BufferAttribute(pw, 3));
+            gw.setAttribute('size', new THREE.BufferAttribute(sw, 1));
+            const mw = new THREE.ShaderMaterial({
+                uniforms: { uT: { value: 0 } },
                 vertexShader: `
-                    attribute float size;
-                    varying float vAlpha;
-                    uniform float uTime;
-                    void main() {
-                        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
-                        gl_PointSize = size * (180.0 / -mvPos.z);
-                        gl_Position  = projectionMatrix * mvPos;
-                        // subtle twinkle
-                        float twinkle = 0.7 + 0.3 * sin(uTime * (0.3 + size * 1.5) + position.x * 2.0 + position.z);
-                        vAlpha = twinkle;
+                    attribute float size; varying float vA; uniform float uT;
+                    void main(){
+                        vec4 m=modelViewMatrix*vec4(position,1.);
+                        gl_PointSize=size*(120./-m.z);
+                        gl_Position=projectionMatrix*m;
+                        vA=.7+.3*sin(uT*(.25+size*1.8)+position.x*3.+position.y*2.);
                     }
                 `,
                 fragmentShader: `
-                    varying float vAlpha;
-                    void main() {
-                        float d = length(gl_PointCoord - vec2(0.5));
-                        if (d > 0.5) discard;
-                        float a = 1.0 - smoothstep(0.0, 0.5, d);
-                        a = pow(a, 1.8);
-                        gl_FragColor = vec4(1.0, 1.0, 1.0, a * vAlpha * 0.85);
+                    varying float vA; void main(){
+                        float d=length(gl_PointCoord-.5); if(d>.5)discard;
+                        gl_FragColor=vec4(1,pow(1.-smoothstep(0.,.5,d),1.8)*vA*.85);
                     }
                 `,
-                transparent: true,
-                depthWrite: false,
-                blending: THREE.AdditiveBlending,
+                transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
             });
-            const stars1 = new THREE.Points(g1, m1);
-            group.add(stars1);
+            g.add(new THREE.Points(gw, mw));
 
-            // --- colored stars (fewer, slightly larger) ---
-            const colorCount = 400;
-            const g2 = new THREE.BufferGeometry();
-            const p2 = new Float32Array(colorCount * 3);
-            const c2 = new Float32Array(colorCount * 3);
-            const s2 = new Float32Array(colorCount);
+            // colored stars (bigger)
+            const cCount = 800;
+            const gc = new THREE.BufferGeometry();
+            const pc = new Float32Array(cCount*3), cc = new Float32Array(cCount*3), sc2 = new Float32Array(cCount);
             const col = new THREE.Color();
-            for (let i = 0; i < colorCount; i++) {
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.acos(2 * Math.random() - 1);
-                const r = 60 + Math.random() * 140;
-                p2[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
-                p2[i * 3 + 1] = r * Math.cos(phi);
-                p2[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
-                col.setHSL(0.55 + Math.random() * 0.35, 0.5, 0.6 + Math.random() * 0.4);
-                c2[i * 3]     = col.r;
-                c2[i * 3 + 1] = col.g;
-                c2[i * 3 + 2] = col.b;
-                s2[i] = 0.3 + Math.random() * 0.7;
+            for (let i = 0; i < cCount; i++) {
+                const th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1), r=80+Math.random()*280;
+                pc[i*3]=r*Math.sin(ph)*Math.cos(th); pc[i*3+1]=r*Math.cos(ph); pc[i*3+2]=r*Math.sin(ph)*Math.sin(th);
+                col.setHSL(0.5+Math.random()*0.4, 0.6, 0.5+Math.random()*0.5);
+                cc[i*3]=col.r; cc[i*3+1]=col.g; cc[i*3+2]=col.b;
+                sc2[i] = 0.3 + Math.random() * 1.0;
             }
-            g2.setAttribute('position', new THREE.BufferAttribute(p2, 3));
-            g2.setAttribute('aColor', new THREE.BufferAttribute(c2, 3));
-            g2.setAttribute('aSize', new THREE.BufferAttribute(s2, 1));
-
-            const m2 = new THREE.ShaderMaterial({
-                uniforms: { uTime: { value: 0 } },
+            gc.setAttribute('position', new THREE.BufferAttribute(pc,3));
+            gc.setAttribute('aColor', new THREE.BufferAttribute(cc,3));
+            gc.setAttribute('aSize', new THREE.BufferAttribute(sc2,1));
+            const mc = new THREE.ShaderMaterial({
+                uniforms: { uT: { value: 0 } },
                 vertexShader: `
-                    attribute float aSize;
-                    attribute vec3 aColor;
-                    varying vec3 vColor;
-                    varying float vAlpha;
-                    uniform float uTime;
-                    void main() {
-                        vColor = aColor;
-                        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
-                        gl_PointSize = aSize * (180.0 / -mvPos.z);
-                        gl_Position  = projectionMatrix * mvPos;
-                        float twinkle = 0.6 + 0.4 * sin(uTime * (0.2 + aSize * 1.2) + position.y * 3.0);
-                        vAlpha = twinkle;
+                    attribute float aSize; attribute vec3 aColor;
+                    varying vec3 vC; varying float vA; uniform float uT;
+                    void main(){
+                        vC=aColor; vec4 m=modelViewMatrix*vec4(position,1.);
+                        gl_PointSize=aSize*(120./-m.z); gl_Position=projectionMatrix*m;
+                        vA=.5+.5*sin(uT*(.15+aSize)+position.y*4.);
                     }
                 `,
                 fragmentShader: `
-                    varying vec3 vColor;
-                    varying float vAlpha;
-                    void main() {
-                        float d = length(gl_PointCoord - vec2(0.5));
-                        if (d > 0.5) discard;
-                        float a = 1.0 - smoothstep(0.0, 0.5, d);
-                        a = pow(a, 2.0);
-                        gl_FragColor = vec4(vColor, a * vAlpha * 0.7);
+                    varying vec3 vC; varying float vA; void main(){
+                        float d=length(gl_PointCoord-.5); if(d>.5)discard;
+                        float a=pow(1.-smoothstep(0.,.5,d),2.);
+                        gl_FragColor=vec4(vC,a*vA*.7);
                     }
                 `,
-                transparent: true,
-                depthWrite: false,
-                blending: THREE.AdditiveBlending,
+                transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
             });
-            const stars2 = new THREE.Points(g2, m2);
-            group.add(stars2);
+            g.add(new THREE.Points(gc, mc));
 
-            return { group, m1, m2 };
+            return { group: g, m1: mw, m2: mc };
         }
 
         const starfield = createStarfield();
         scene.add(starfield.group);
 
         // ══════════════════════════════════════════════════════════════════════════
-        //  TORNADO PARTICLES
+        //  MAIN PARTICLE SYSTEM  —  2000 粒子 + 8 螺旋臂 + 状态机
+        // ══════════════════════════════════════════════════════════════════════════
+        //  States:  0=AMBIENT  1=ATTRACTED  2=DESCENDING  3=ESCAPING
         // ══════════════════════════════════════════════════════════════════════════
 
-        const PARTICLE_COUNT = 800;
-        const STRANDS = 6;               // number of spiral arms
-        const PTS_PER_STRAND = PARTICLE_COUNT / STRANDS;
-        const TOTAL_HEIGHT = 14;
-        const BASE_RADIUS = 4.5;
-        const TOP_RADIUS = 0.2;
-        const SPIRAL_TURNS = 3.5;
-        const TURBULENCE = 0.15;
+        const PC = 2000;          // particle count
+        const STRANDS = 8;
+        const H = 15;             // total height
+        const TR = 5.5;           // top radius
+        const BR = 0.2;           // bottom radius
+        const SPIRAL_TURNS = 4;
+        const AMBIENT_R = 16;
+        const ESCAPE_R = 15;
 
-        // per-particle metadata for animation
-        const particleMeta = [];
-
-        // geometry buffers
         const geo = new THREE.BufferGeometry();
-        const pos = new Float32Array(PARTICLE_COUNT * 3);
-        const col = new Float32Array(PARTICLE_COUNT * 3);
-        const sizes = new Float32Array(PARTICLE_COUNT);
+        const pos = new Float32Array(PC * 3);
+        const col = new Float32Array(PC * 3);
+        const sz  = new Float32Array(PC);
 
-        const tmpColor = new THREE.Color();
+        const M = []; // meta
+        const tmpC = new THREE.Color();
 
-        for (let i = 0; i < PARTICLE_COUNT; i++) {
+        function randSphere(radius, cy) {
+            const th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
+            const r = radius * Math.cbrt(Math.random());
+            return { x: r*Math.sin(ph)*Math.cos(th), y: r*Math.cos(ph)+(cy||0), z: r*Math.sin(ph)*Math.sin(th) };
+        }
+
+        // --- init particles ---
+        for (let i = 0; i < PC; i++) {
+            const hue = Math.random();
             const strandIdx = i % STRANDS;
-            const t = Math.floor(i / STRANDS) / PTS_PER_STRAND; // 0..1
+            let state;
+            if      (i < 800)  state = 2; // DESCENDING
+            else if (i < 1400) state = 0; // AMBIENT
+            else if (i < 1750) state = 1; // ATTRACTED
+            else               state = 3; // ESCAPING
 
-            // noise offsets for organic feel
-            const nX = (Math.random() - 0.5) * TURBULENCE;
-            const nZ = (Math.random() - 0.5) * TURBULENCE;
-            const nY = (Math.random() - 0.5) * TURBULENCE * 0.5;
-            const phase = Math.random() * Math.PI * 2;
+            const m = {
+                state, strandIdx, hue,
+                // ambient
+                ambientPos: new THREE.Vector3(),
+                ambientVel: new THREE.Vector3((Math.random()-.5)*.4, (Math.random()-.5)*.2, (Math.random()-.5)*.4),
+                ambientTimer: 2+Math.random()*5,
+                // attracted
+                attractProgress: 0,
+                attractStartPos: new THREE.Vector3(),
+                attractEntryAngle: 0,
+                // descending
+                spiralT: 0,
+                spiralAngle: 0,
+                // escaping
+                escapeAngle: 0,
+                escapeSpeed: 0,
+                escapeLife: 0,
+            };
 
-            // initial position
-            const y = t * TOTAL_HEIGHT;
-            const radius = BASE_RADIUS * (1 - t) + TOP_RADIUS * t;
-            const angle = t * Math.PI * 2 * SPIRAL_TURNS + (strandIdx / STRANDS) * Math.PI * 2;
-
-            pos[i * 3]     = Math.cos(angle) * radius + nX;
-            pos[i * 3 + 1] = y + nY;
-            pos[i * 3 + 2] = Math.sin(angle) * radius + nZ;
-
-            // rainbow colour — hue shifts with height and strand
-            const hue = (t * 0.72 + strandIdx * 0.025 + 0.0) % 1.0;
-            tmpColor.setHSL(hue, 0.85, 0.5 + Math.random() * 0.35);
-            col[i * 3]     = tmpColor.r;
-            col[i * 3 + 1] = tmpColor.g;
-            col[i * 3 + 2] = tmpColor.b;
-
-            // size: larger at bottom, smaller at top, with randomness
-            const baseSize = 0.07 + (1 - t) * 0.22;
-            sizes[i] = baseSize * (0.7 + Math.random() * 0.6);
-
-            particleMeta.push({
-                strandIdx,
-                t0: t,
-                nX, nZ, nY, phase,
-                hue,
-                baseSize,
-                sat: 0.85,
-                light: 0.5 + Math.random() * 0.35,
-            });
+            switch (state) {
+                case 0: { const p = randSphere(AMBIENT_R*0.7, H*0.5); m.ambientPos.set(p.x,p.y,p.z); m.ambientTimer=2+Math.random()*6; break; }
+                case 1: { const p = randSphere(AMBIENT_R*0.5, H*0.5); m.attractStartPos.set(p.x,p.y,p.z); m.attractProgress=Math.random(); m.attractEntryAngle=Math.random()*Math.PI*2; break; }
+                case 2: { m.spiralT=Math.random(); m.spiralAngle=Math.random()*Math.PI*2+strandIdx*.7; break; }
+                case 3: { m.escapeAngle=Math.random()*Math.PI*2; m.escapeSpeed=1.5+Math.random()*3; m.escapeLife=Math.random()*.8; break; }
+            }
+            M.push(m);
         }
 
-        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-        geo.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
-        geo.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
-
-        // ─── Tornado shader material ─────────────────────────────────────────────
-        const tornadoMaterial = new THREE.ShaderMaterial({
-            uniforms: {
-                uTime: { value: 0 },
-                uPixelRatio: { value: renderer.getPixelRatio() },
-            },
-            vertexShader: `
-                attribute float aSize;
-                attribute vec3 aColor;
-                varying vec3 vColor;
-                varying float vAlpha;
-                uniform float uPixelRatio;
-
-                void main() {
-                    vColor = aColor;
-                    vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
-                    float scale = uPixelRatio * 280.0;
-                    gl_PointSize = aSize * (scale / -mvPos.z);
-                    gl_Position  = projectionMatrix * mvPos;
-
-                    // slight brightness variation per particle (subtle shimmer)
-                    vAlpha = 0.85 + 0.15 * sin(position.x * 5.0 + position.y * 3.0 + position.z * 7.0);
+        // --- position computer ---
+        function compPos(m) {
+            switch (m.state) {
+                case 0: return { x: m.ambientPos.x, y: m.ambientPos.y, z: m.ambientPos.z };
+                case 1: {
+                    const t = m.attractProgress, e = t*t*(3-2*t);
+                    const s = m.attractStartPos;
+                    const rTgt = 0.1 + (1-e)*0.9;
+                    const tx = Math.cos(m.attractEntryAngle)*TR*rTgt*0.4, tz = Math.sin(m.attractEntryAngle)*TR*rTgt*0.4, ty = H*0.96;
+                    let x = s.x + (tx-s.x)*e, y = s.y + (ty-s.y)*e, z = s.z + (tz-s.z)*e;
+                    const spin = t*t*3.5, sw = t*t;
+                    x += Math.cos(m.attractEntryAngle+spin*0.6)*TR*t*0.4*sw;
+                    z += Math.sin(m.attractEntryAngle+spin*0.6)*TR*t*0.4*sw;
+                    return { x, y, z };
                 }
-            `,
-            fragmentShader: `
-                varying vec3 vColor;
-                varying float vAlpha;
-
-                void main() {
-                    vec2 uv = gl_PointCoord - vec2(0.5);
-                    float d = length(uv);
-                    if (d > 0.5) discard;
-
-                    // soft glow: bright core → soft edge
-                    float alpha = 1.0 - smoothstep(0.0, 0.5, d);
-                    alpha = pow(alpha, 1.6);
-
-                    // slight hot center
-                    float core = 1.0 - smoothstep(0.0, 0.2, d);
-                    vec3 color = vColor + vec3(0.25) * core;
-
-                    gl_FragColor = vec4(color, alpha * vAlpha);
+                case 2: {
+                    const t = m.spiralT, r = TR*t + BR*(1-t);
+                    const off = (m.strandIdx/STRANDS)*0.4;
+                    return { x: Math.cos(m.spiralAngle+off)*r, y: t*H, z: Math.sin(m.spiralAngle+off)*r };
                 }
-            `,
-            transparent: true,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-        });
-
-        const tornado = new THREE.Points(geo, tornadoMaterial);
-        scene.add(tornado);
-
-        // ─── Inner core glow (bright central column, small particles) ────────────
-        const coreCount = 120;
-        const coreGeo = new THREE.BufferGeometry();
-        const corePos = new Float32Array(coreCount * 3);
-        const coreCol = new Float32Array(coreCount * 3);
-        const coreSizes = new Float32Array(coreCount);
-        const coreMeta = [];
-
-        for (let i = 0; i < coreCount; i++) {
-            const t = i / coreCount;
-            const y = t * TOTAL_HEIGHT;
-            const spread = 0.15 + t * 0.3;
-            corePos[i * 3]     = (Math.random() - 0.5) * spread;
-            corePos[i * 3 + 1] = y;
-            corePos[i * 3 + 2] = (Math.random() - 0.5) * spread;
-            const hue = (t * 0.6 + 0.1) % 1.0;
-            tmpColor.setHSL(hue, 0.9, 0.7);
-            coreCol[i * 3]     = tmpColor.r;
-            coreCol[i * 3 + 1] = tmpColor.g;
-            coreCol[i * 3 + 2] = tmpColor.b;
-            coreSizes[i] = 0.04 + (1 - t) * 0.12;
-            coreMeta.push({ t0: t, phase: Math.random() * Math.PI * 2 });
+                case 3: {
+                    const l = m.escapeLife, d = l * ESCAPE_R * 1.4;
+                    return {
+                        x: Math.cos(m.escapeAngle)*d,
+                        y: BR*0.3 + l*4 + 0.3*Math.sin(m.escapeAngle*3+l*6),
+                        z: Math.sin(m.escapeAngle)*d,
+                    };
+                }
+                default: return { x:0, y:0, z:0 };
+            }
         }
-        coreGeo.setAttribute('position', new THREE.BufferAttribute(corePos, 3));
-        coreGeo.setAttribute('aColor', new THREE.BufferAttribute(coreCol, 3));
-        coreGeo.setAttribute('aSize', new THREE.BufferAttribute(coreSizes, 1));
 
-        const coreMat = new THREE.ShaderMaterial({
-            uniforms: {
-                uTime: { value: 0 },
-                uPixelRatio: { value: renderer.getPixelRatio() },
-            },
-            vertexShader: `
-                attribute float aSize;
-                attribute vec3 aColor;
-                varying vec3 vColor;
-                uniform float uPixelRatio;
-                void main() {
-                    vColor = aColor;
-                    vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
-                    gl_PointSize = aSize * (uPixelRatio * 350.0 / -mvPos.z);
-                    gl_Position = projectionMatrix * mvPos;
+        // --- update pass ---
+        function updateParticles(dt, time) {
+            for (let i = 0; i < PC; i++) {
+                const m = M[i];
+
+                // ----- state machine -----
+                switch (m.state) {
+                    case 0: {
+                        const p = m.ambientPos, v = m.ambientVel;
+                        p.x += v.x*dt; p.y += v.y*dt; p.z += v.z*dt;
+                        v.x += (Math.random()-.5)*0.6*dt;
+                        v.y += (Math.random()-.5)*0.3*dt;
+                        v.z += (Math.random()-.5)*0.6*dt;
+                        if (v.length() > 1.2) v.setLength(1.2);
+
+                        // boundary
+                        const dxz = Math.sqrt(p.x*p.x+p.z*p.z);
+                        const maxR = AMBIENT_R * (0.35 + 0.35*Math.sin(p.y*0.2+time*0.08));
+                        if (dxz > maxR) { const r = maxR/dxz; p.x*=r*0.97; p.z*=r*0.97; }
+                        if (p.y < -3) { p.y = -3; }
+                        if (p.y > H+5) { p.y = H+5; }
+
+                        m.ambientTimer -= dt;
+                        if (m.ambientTimer <= 0) {
+                            const dy = H - p.y, dxz2 = Math.sqrt(p.x*p.x+p.z*p.z);
+                            const nearTop = dy < 9 && dxz2 < TR*1.6;
+                            if ((nearTop && Math.random()<0.7) || Math.random()<0.12) {
+                                m.state = 1;
+                                m.attractProgress = 0;
+                                m.attractStartPos.copy(p);
+                                m.attractEntryAngle = Math.atan2(p.z, p.x) + (Math.random()-.5)*1.2;
+                            } else {
+                                m.ambientTimer = 3 + Math.random()*7;
+                            }
+                        }
+                        break;
+                    }
+                    case 1: {
+                        m.attractProgress += dt * (0.4 + m.attractProgress*0.5);
+                        if (m.attractProgress >= 1) {
+                            m.state = 2;
+                            m.spiralT = 0.95 + Math.random()*0.05;
+                            m.spiralAngle = m.attractEntryAngle + Math.random()*0.6;
+                        }
+                        break;
+                    }
+                    case 2: {
+                        const speedF = 1 + (1-m.spiralT)*5.0; // 1x→6x
+                        m.spiralT -= dt * 0.14 * speedF;
+                        m.spiralAngle += dt * (1.5 + (1-m.spiralT)*4.0);
+                        if (m.spiralT <= 0) {
+                            m.state = 3;
+                            m.escapeAngle = m.spiralAngle + (Math.random()-.5)*1.0;
+                            m.escapeSpeed = 2 + Math.random()*3;
+                            m.escapeLife = 0;
+                        }
+                        break;
+                    }
+                    case 3: {
+                        m.escapeLife += dt * (0.3 + 0.12*Math.sin(time*0.5+m.escapeAngle));
+                        if (m.escapeLife >= 1) {
+                            m.state = 0;
+                            const p2 = randSphere(AMBIENT_R*0.6, H*0.3+Math.random()*4);
+                            m.ambientPos.set(p2.x, p2.y, p2.z);
+                            m.ambientVel.set((Math.random()-.5)*.4, (Math.random()-.5)*.2, (Math.random()-.5)*.4);
+                            m.ambientTimer = 3 + Math.random()*6;
+                        }
+                        break;
+                    }
                 }
-            `,
-            fragmentShader: `
-                varying vec3 vColor;
-                void main() {
-                    float d = length(gl_PointCoord - vec2(0.5));
-                    if (d > 0.5) discard;
-                    float a = 1.0 - smoothstep(0.0, 0.5, d);
-                    a = pow(a, 1.4);
-                    gl_FragColor = vec4(vColor, a * 0.8);
+
+                // ----- position & colour -----
+                const p = compPos(m);
+                pos[i*3]=p.x; pos[i*3+1]=p.y; pos[i*3+2]=p.z;
+
+                let hue = m.hue, sat = 0.3, light = 0.4;
+                switch (m.state) {
+                    case 0:
+                        sat = 0.2 + 0.2*Math.sin(time*0.3+i*0.5);
+                        light = 0.25 + 0.2*Math.sin(time*0.4+i*0.7);
+                        break;
+                    case 1:
+                        sat = 0.5 + m.attractProgress*0.5;
+                        light = 0.35 + m.attractProgress*0.5;
+                        break;
+                    case 2:
+                        sat = 0.85 + (1-m.spiralT)*0.15;
+                        light = 0.65 + (1-m.spiralT)*0.3;
+                        hue = (m.hue + (1-m.spiralT)*0.3) % 1.0;
+                        break;
+                    case 3:
+                        sat = 0.7 * (1-m.escapeLife);
+                        light = 0.7 * (1-m.escapeLife*0.6);
+                        break;
                 }
-            `,
-            transparent: true,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-        });
+                tmpC.setHSL(hue, sat, light);
+                col[i*3]=tmpC.r; col[i*3+1]=tmpC.g; col[i*3+2]=tmpC.b;
 
-        const corePoints = new THREE.Points(coreGeo, coreMat);
-        scene.add(corePoints);
-
-        // ─── Ground glow ring ─────────────────────────────────────────────────────
-        const ringGeo = new THREE.RingGeometry(3.5, 5.5, 64);
-        const ringMat = new THREE.MeshBasicMaterial({
-            color: 0x4466ff,
-            transparent: true,
-            opacity: 0.06,
-            side: THREE.DoubleSide,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-        });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.rotation.x = -Math.PI / 2;
-        ring.position.y = 0.1;
-        scene.add(ring);
-
-        // secondary ring
-        const ringGeo2 = new THREE.RingGeometry(2.0, 3.6, 64);
-        const ringMat2 = new THREE.MeshBasicMaterial({
-            color: 0xff66aa,
-            transparent: true,
-            opacity: 0.04,
-            side: THREE.DoubleSide,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-        });
-        const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
-        ring2.rotation.x = -Math.PI / 2;
-        ring2.position.y = 0.05;
-        scene.add(ring2);
-
-        // ══════════════════════════════════════════════════════════════════════════
-        //  ANIMATION LOOP
-        // ══════════════════════════════════════════════════════════════════════════
-
-        function updateParticles(time) {
-            const p = geo.attributes.position.array;
-            const c = geo.attributes.aColor.array;
-            const s = geo.attributes.aSize.array;
-            const flowSpeed = 0.06;   // how fast particles rise
-            const spinSpeed = 0.45;   // rotation speed
-
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                const m = particleMeta[i];
-                // animate t upward, wrap around
-                let t = (m.t0 + time * flowSpeed) % 1.0;
-
-                // ease for more concentration near top/bottom? keep linear for now
-
-                const y = t * TOTAL_HEIGHT;
-                const radius = BASE_RADIUS * (1 - t) + TOP_RADIUS * t;
-                const angleOffset = (m.strandIdx / STRANDS) * Math.PI * 2;
-                const spiralAngle = t * Math.PI * 2 * SPIRAL_TURNS + angleOffset + time * spinSpeed;
-
-                // add some wobble
-                const wobble = 0.08 * Math.sin(t * Math.PI * 4 + time * 0.7 + m.phase);
-                const wobble2 = 0.08 * Math.cos(t * Math.PI * 4 + time * 0.7 + m.phase * 1.3);
-
-                p[i * 3]     = Math.cos(spiralAngle) * (radius + wobble) + m.nX;
-                p[i * 3 + 1] = y + m.nY + 0.05 * Math.sin(time * 0.5 + m.phase);
-                p[i * 3 + 2] = Math.sin(spiralAngle) * (radius + wobble2) + m.nZ;
-
-                // update color for dynamic rainbow (optional)
-                const hue = (t * 0.72 + m.strandIdx * 0.025 + 0.0) % 1.0;
-                tmpColor.setHSL(hue, m.sat, 0.5 + Math.random() * 0.1);
-                c[i * 3]     = tmpColor.r;
-                c[i * 3 + 1] = tmpColor.g;
-                c[i * 3 + 2] = tmpColor.b;
-
-                // size decreases as particles rise
-                s[i] = m.baseSize * (0.4 + 0.6 * (1 - t));
+                let size = 0.05;
+                switch (m.state) {
+                    case 0: size = 0.04 + 0.05*Math.sin(hue*8+time*0.4); break;
+                    case 1: size = 0.07 + m.attractProgress*0.12; break;
+                    case 2: size = 0.10 + (1-m.spiralT)*0.22; break;
+                    case 3: size = 0.15 * (1-m.escapeLife*0.75); break;
+                }
+                sz[i] = Math.max(0.03, size);
             }
 
             geo.attributes.position.needsUpdate = true;
@@ -473,78 +373,284 @@
             geo.attributes.aSize.needsUpdate = true;
         }
 
-        function updateCore(time) {
-            const p = coreGeo.attributes.position.array;
-            const flowSpeed = 0.07;
-            const spread = 0.15;
+        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        geo.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+        geo.setAttribute('aSize', new THREE.BufferAttribute(sz, 1));
 
-            for (let i = 0; i < coreCount; i++) {
-                const m = coreMeta[i];
-                let t = (m.t0 + time * flowSpeed) % 1.0;
-                const y = t * TOTAL_HEIGHT;
-                const r = spread + t * 0.35;
-                const angle = time * 0.6 + m.phase;
-                p[i * 3]     = Math.cos(angle) * r * (0.3 + 0.7 * Math.random());
-                p[i * 3 + 1] = y + 0.03 * Math.sin(time * 0.8 + m.phase);
-                p[i * 3 + 2] = Math.sin(angle) * r * (0.3 + 0.7 * Math.random());
+        // initial sync
+        (function initBuf() {
+            for (let i = 0; i < PC; i++) {
+                const m = M[i], p = compPos(m);
+                pos[i*3]=p.x; pos[i*3+1]=p.y; pos[i*3+2]=p.z;
+                let hue = m.hue, sat = .3, light = .4;
+                switch(m.state){
+                    case 0: sat=.3; light=.3; break;
+                    case 1: sat=.4+m.attractProgress*.3; light=.35+m.attractProgress*.3; break;
+                    case 2: sat=.85; light=.65+(1-m.spiralT)*.3; break;
+                    case 3: sat=.5*(1-m.escapeLife); light=.5*(1-m.escapeLife*.5); break;
+                }
+                tmpC.setHSL(hue,sat,light);
+                col[i*3]=tmpC.r; col[i*3+1]=tmpC.g; col[i*3+2]=tmpC.b;
+                sz[i] = m.state===2 ? 0.18 : 0.07;
             }
-            coreGeo.attributes.position.needsUpdate = true;
+            geo.attributes.position.needsUpdate=true;
+            geo.attributes.aColor.needsUpdate=true;
+            geo.attributes.aSize.needsUpdate=true;
+        })();
+
+        // --- ShaderMaterial (glow core) ---
+        const mat = new THREE.ShaderMaterial({
+            uniforms: { uPR: { value: renderer.getPixelRatio() } },
+            vertexShader: `
+                attribute float aSize; attribute vec3 aColor;
+                varying vec3 vC; varying float vA;
+                void main(){
+                    vC=aColor; vec4 m=modelViewMatrix*vec4(position,1.);
+                    gl_PointSize=aSize*(280./-m.z); gl_Position=projectionMatrix*m;
+                    vA=.85+.15*sin(position.x*4.+position.z*6.);
+                }
+            `,
+            fragmentShader: `
+                varying vec3 vC; varying float vA;
+                void main(){
+                    float d=length(gl_PointCoord-.5); if(d>.5)discard;
+                    float a=pow(1.-smoothstep(0.,.5,d),1.4);
+                    float core=1.-smoothstep(0.,.18,d);
+                    gl_FragColor=vec4(vC+vec3(.35)*core, a*vA);
+                }
+            `,
+            transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        });
+        scene.add(new THREE.Points(geo, mat));
+
+        // ══════════════════════════════════════════════════════════════════════════
+        //  CORE  —  200 快速发光粒子
+        // ══════════════════════════════════════════════════════════════════════════
+        const CORE_N = 200;
+        const cg = new THREE.BufferGeometry();
+        const cp = new Float32Array(CORE_N*3), cc = new Float32Array(CORE_N*3), cs = new Float32Array(CORE_N);
+        const cMeta = [];
+        for (let i = 0; i < CORE_N; i++) {
+            const t = Math.random(), hue = t*0.5+0.05;
+            tmpC.setHSL(hue,1,0.8);
+            cp[i*3]=0; cp[i*3+1]=t*H; cp[i*3+2]=0;
+            cc[i*3]=tmpC.r; cc[i*3+1]=tmpC.g; cc[i*3+2]=tmpC.b;
+            cs[i]=0.06+Math.random()*0.15;
+            cMeta.push({ t0:t, phase:Math.random()*Math.PI*2, speed:0.5+Math.random()*0.8 });
+        }
+        cg.setAttribute('position', new THREE.BufferAttribute(cp,3));
+        cg.setAttribute('aColor', new THREE.BufferAttribute(cc,3));
+        cg.setAttribute('aSize', new THREE.BufferAttribute(cs,1));
+
+        const cMat = new THREE.ShaderMaterial({
+            uniforms: { uPR: { value: renderer.getPixelRatio() } },
+            vertexShader: `
+                attribute float aSize; attribute vec3 aColor; varying vec3 vC;
+                uniform float uPR;
+                void main(){ vC=aColor; vec4 m=modelViewMatrix*vec4(position,1.);
+                    gl_PointSize=aSize*(uPR*400./-m.z); gl_Position=projectionMatrix*m; }
+            `,
+            fragmentShader: `
+                varying vec3 vC; void main(){
+                    float d=length(gl_PointCoord-.5); if(d>.5)discard;
+                    float a=pow(1.-smoothstep(0.,.5,d),1.2);
+                    gl_FragColor=vec4(vC+vec3(.3),a*.85);
+                }
+            `,
+            transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        });
+        const corePts = new THREE.Points(cg, cMat);
+        scene.add(corePts);
+
+        function updateCore(time) {
+            const p = cg.attributes.position.array;
+            for (let i = 0; i < CORE_N; i++) {
+                const m = cMeta[i], t = (m.t0 + time*0.07*m.speed) % 1.0;
+                const r = 0.12 + t*0.25;
+                const ang = time*0.9 + m.phase;
+                p[i*3]=Math.cos(ang)*r*(.4+.6*Math.sin(time*0.4+m.phase));
+                p[i*3+1]=t*H;
+                p[i*3+2]=Math.sin(ang)*r*(.4+.6*Math.cos(time*0.4+m.phase));
+            }
+            cg.attributes.position.needsUpdate=true;
         }
 
+        // ══════════════════════════════════════════════════════════════════════════
+        //  SPARKLES  —  120 颗高亮星尘绕龙卷风飞舞
+        // ══════════════════════════════════════════════════════════════════════════
+        const SPK_N = 120;
+        const sg = new THREE.BufferGeometry();
+        const sp = new Float32Array(SPK_N*3), sc = new Float32Array(SPK_N*3), ss = new Float32Array(SPK_N);
+        const sMeta = [];
+        for (let i = 0; i < SPK_N; i++) {
+            const t = Math.random(), ang = Math.random()*Math.PI*2;
+            const r = TR * (0.3 + t*0.7) * (0.8+Math.random()*0.4);
+            sp[i*3]=Math.cos(ang)*r; sp[i*3+1]=t*H; sp[i*3+2]=Math.sin(ang)*r;
+            const hue = Math.random();
+            tmpC.setHSL(hue, 1, 0.9);
+            sc[i*3]=tmpC.r; sc[i*3+1]=tmpC.g; sc[i*3+2]=tmpC.b;
+            ss[i] = 0.12 + Math.random()*0.25;
+            sMeta.push({ t0:t, ang0:ang, phase:Math.random()*Math.PI*2, hue, speed:0.3+Math.random()*0.6, rad:r });
+        }
+        sg.setAttribute('position', new THREE.BufferAttribute(sp,3));
+        sg.setAttribute('aColor', new THREE.BufferAttribute(sc,3));
+        sg.setAttribute('aSize', new THREE.BufferAttribute(ss,1));
+
+        const sMat = new THREE.ShaderMaterial({
+            uniforms: { uT: { value: 0 }, uPR: { value: renderer.getPixelRatio() } },
+            vertexShader: `
+                attribute float aSize; attribute vec3 aColor;
+                varying vec3 vC; varying float vA; uniform float uT;
+                void main(){
+                    vC=aColor; vec4 m=modelViewMatrix*vec4(position,1.);
+                    gl_PointSize=aSize*(uPR*320./-m.z); gl_Position=projectionMatrix*m;
+                    float twinkle=.5+.5*sin(uT*(.8+aSize*2.)+position.y*5.);
+                    vA=twinkle;
+                }
+            `,
+            fragmentShader: `
+                varying vec3 vC; varying float vA; void main(){
+                    float d=length(gl_PointCoord-.5); if(d>.5)discard;
+                    float a=pow(1.-smoothstep(0.,.5,d),1.0);
+                    float core=1.-smoothstep(0.,.12,d);
+                    gl_FragColor=vec4(vC+vec4(.5,0.2,0.5,0)*core, a*vA*.95);
+                }
+            `,
+            transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+        });
+        const sparklePts = new THREE.Points(sg, sMat);
+        scene.add(sparklePts);
+
+        function updateSparkles(time) {
+            const p = sg.attributes.position.array;
+            for (let i = 0; i < SPK_N; i++) {
+                const m = sMeta[i];
+                const t = (m.t0 + time*0.04*m.speed) % 1.0;
+                const r = TR * (0.2 + t*0.8) * (0.8+0.3*Math.sin(time*0.2+m.phase));
+                const ang = m.ang0 + time*(0.3+m.speed*0.4) + t*2;
+                p[i*3]=Math.cos(ang)*r;
+                p[i*3+1]=t*H + 0.2*Math.sin(time*0.5+m.phase);
+                p[i*3+2]=Math.sin(ang)*r;
+            }
+            sg.attributes.position.needsUpdate=true;
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════
+        //  GLOW RINGS  —  顶部光环 + 能量环 + 底部爆炸
+        // ══════════════════════════════════════════════════════════════════════════
+        function makeRing(inner, outer, color, y, opacity) {
+            const m = new THREE.Mesh(
+                new THREE.RingGeometry(inner, outer, 64),
+                new THREE.MeshBasicMaterial({
+                    color, transparent: true, opacity,
+                    side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending,
+                })
+            );
+            m.position.y = y; m.rotation.x = -Math.PI/2;
+            return m;
+        }
+
+        // top halo
+        const rings = [];
+        rings.push(makeRing(TR*0.5, TR*1.3, 0x4488ff, H*0.98, 0.10));
+        rings.push(makeRing(TR*0.2, TR*0.8, 0xaa66ff, H*0.98, 0.07));
+        rings.push(makeRing(TR*0.7, TR*1.1, 0x00ddff, H*0.98, 0.04));
+
+        // energy bands along the funnel
+        for (let i = 0; i < 6; i++) {
+            const t = 0.1 + i/6 * 0.85;
+            const r = TR*t + BR*(1-t);
+            const colors = [0xff4488, 0xff8844, 0x44ff88, 0x4488ff, 0x8844ff, 0xff44aa];
+            const ring = makeRing(r*0.6, r*1.2, colors[i%6], t*H, 0.03+0.02*Math.sin(i*2.5));
+            rings.push(ring);
+        }
+
+        // bottom escape glow
+        rings.push(makeRing(0.3, 2.0, 0xff44aa, 0.1, 0.08));
+        rings.push(makeRing(0.5, 4.0, 0x6644ff, 0.05, 0.06));
+        rings.push(makeRing(0.2, 6.0, 0x00ffcc, 0.0, 0.03));
+
+        rings.forEach(r => scene.add(r));
+
+        // --- faint funnel wireframe ---
+        const cone = new THREE.Mesh(
+            new THREE.CylinderGeometry(TR*0.85, BR*0.3, H, 48, 1, true),
+            new THREE.MeshBasicMaterial({ color:0x4488ff, transparent:true, opacity:0.02, side:THREE.DoubleSide, depthWrite:false, wireframe:true })
+        );
+        cone.position.y = H/2;
+        scene.add(cone);
+
+        // --- bottom glow sphere (ground illumination) ---
+        const glowSphere = new THREE.Mesh(
+            new THREE.SphereGeometry(3, 16, 16),
+            new THREE.MeshBasicMaterial({ color:0xff44aa, transparent:true, opacity:0.04, depthWrite:false, blending:THREE.AdditiveBlending })
+        );
+        glowSphere.position.y = 0;
+        scene.add(glowSphere);
+
+        // --- top glow sphere ---
+        const topGlow = new THREE.Mesh(
+            new THREE.SphereGeometry(4, 16, 16),
+            new THREE.MeshBasicMaterial({ color:0x4488ff, transparent:true, opacity:0.04, depthWrite:false, blending:THREE.AdditiveBlending })
+        );
+        topGlow.position.y = H;
+        scene.add(topGlow);
+
+        // ══════════════════════════════════════════════════════════════════════════
+        //  ANIMATION
+        // ══════════════════════════════════════════════════════════════════════════
         function animate() {
             requestAnimationFrame(animate);
 
+            const dt = Math.min(clock.getDelta(), 0.05);
             const elapsed = clock.getElapsedTime();
 
-            // update uniforms for star twinkle
-            starfield.m1.uniforms.uTime.value = elapsed;
-            starfield.m2.uniforms.uTime.value = elapsed;
+            starfield.m1.uniforms.uT.value = elapsed;
+            starfield.m2.uniforms.uT.value = elapsed;
+            sMat.uniforms.uT.value = elapsed;
 
-            // animate tornado particles
-            updateParticles(elapsed);
+            updateParticles(dt, elapsed);
             updateCore(elapsed);
+            updateSparkles(elapsed);
 
-            // animate ground glow rings
-            ring.rotation.z = elapsed * 0.08;
-            ring.material.opacity = 0.05 + 0.025 * Math.sin(elapsed * 0.3);
-            ring2.rotation.z = -elapsed * 0.12;
-            ring2.material.opacity = 0.03 + 0.02 * Math.sin(elapsed * 0.4 + 1.0);
+            // animate rings
+            const rs = elapsed * 0.06;
+            rings.forEach((r, i) => {
+                r.rotation.z = rs * (1 + (i%3)*0.3) * (i%2===0 ? 1 : -1);
+                const baseOpacity = parseFloat(r.material.opacity.toFixed(3));
+                if (i < 3) { // top
+                    r.material.opacity = (i===0?0.08: i===1?0.05:0.03) + 0.03*Math.sin(elapsed*0.25+i);
+                } else if (i < 9) { // energy bands
+                    r.material.opacity = 0.025 + 0.02*Math.sin(elapsed*0.3+i*0.8);
+                } else { // bottom
+                    r.material.opacity = (i===9?0.06: i===10?0.04:0.02) + 0.025*Math.sin(elapsed*0.35+i*0.5);
+                }
+            });
 
-            // slight scale pulse on core
-            const pulse = 1 + 0.015 * Math.sin(elapsed * 0.5);
-            corePoints.scale.set(pulse, 1, pulse);
+            cone.material.opacity = 0.015 + 0.01*Math.sin(elapsed*0.15);
+            glowSphere.material.opacity = 0.03 + 0.025*Math.sin(elapsed*0.2);
+            topGlow.material.opacity = 0.03 + 0.02*Math.sin(elapsed*0.18+1);
 
             controls.update();
             renderer.render(scene, camera);
         }
 
+        // warm up first frame
+        for (let i = 0; i < 5; i++) updateParticles(0.016, 0);
+
         animate();
 
         // ══════════════════════════════════════════════════════════════════════════
-        //  RESIZE
+        //  RESIZE / KEYBOARD
         // ══════════════════════════════════════════════════════════════════════════
-
         window.addEventListener('resize', () => {
-            const w = window.innerWidth;
-            const h = window.innerHeight;
-            camera.aspect = w / h;
+            camera.aspect = window.innerWidth/window.innerHeight;
             camera.updateProjectionMatrix();
-            renderer.setSize(w, h);
+            renderer.setSize(window.innerWidth, window.innerHeight);
         });
+        window.addEventListener('keydown', e => { if(e.code==='Space'){ e.preventDefault(); controls.autoRotate=!controls.autoRotate; } });
 
-        // ══════════════════════════════════════════════════════════════════════════
-        //  KEYBOARD SHORTCUT: [Space] toggle auto-rotate
-        // ══════════════════════════════════════════════════════════════════════════
-
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') {
-                e.preventDefault();
-                controls.autoRotate = !controls.autoRotate;
-            }
-        });
-
-        // small log
-        console.log('🌀 龙卷风粒子漩涡已启动 — 拖拽旋转 · 滚轮缩放 · Space 切换自动旋转');
+        console.log('🌀 超炫龙卷风粒子 — 2000粒子 × 8螺旋臂 × 星尘飞舞');
     </script>
 
 </body>
