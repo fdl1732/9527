@@ -1,0 +1,20 @@
+Step 1 — 把 HTML 文件放入 works/ 文件夹
+Step 2 — 打开 assets/works.js，在 works 数组最后添加：
+
+
+  {
+    id: "你的作品id",
+    title: "作品标题",
+    desc: "简短描述",
+    tags: ["visual", "html"],
+    date: "2026-06-01",
+    href: "works/文件名.html"
+  },
+注意：上一条末尾的 }, 一定要有逗号！
+
+Step 3 — 提交推送
+
+
+git add .
+git commit -m "发布: 作品名"
+git push

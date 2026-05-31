@@ -20,6 +20,15 @@ const works = [
     date: "2026-05-30",
     href: "works/人体模型.html"
   },
+  {
+    id: "tornado-particles",
+    title: "龙卷风粒子",
+    desc: "模拟龙卷风中粒子的运动轨迹",
+    tags: ["visual", "interactive", "html"],
+    date: "2026-05-31",
+    href: "works/tornado-particles.html"
+  },
+
   // ─────────────────────────────────────────────────────────────
   // 📌 添加新作品示例（复制下面取消注释即可）：
   //
