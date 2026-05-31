@@ -18,7 +18,7 @@ const works = [
     desc: "交互式 3D 人体模型展示",
     tags: ["visual", "interactive", "html"],
     date: "2026-05-30",
-    href: "works/人体模型.html"
+    href: "works/body-model.html"
   },
   {
     id: "tornado-particles",
