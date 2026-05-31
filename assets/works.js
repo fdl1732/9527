@@ -11,7 +11,7 @@ const works = [
     tags: ["visual", "interactive", "html"],
     date: "2026-05-30",
     href: "works/blackhole.html"
-  }
+  },
   {
     id: "human-model",
     title: "人体模型",
