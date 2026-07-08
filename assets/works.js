@@ -28,6 +28,14 @@ const works = [
     date: "2026-05-31",
     href: "works/tornado-particles.html"
   },
+  {
+    id: "water-vortex",
+    title: "水旋涡 · 粒子投放",
+    desc: "半透明水旋涡特效，点击投放黄色粒子，被旋涡吸入顶端后螺旋下坠消散。",
+    tags: ["visual", "interactive", "html"],
+    date: "2026-06-07",
+    href: "works/water-vortex.html"
+  },
 
   // ─────────────────────────────────────────────────────────────
   // 📌 添加新作品示例（复制下面取消注释即可）：
