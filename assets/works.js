@@ -36,6 +36,14 @@ const works = [
     date: "2026-06-07",
     href: "works/water-vortex.html"
   },
+  {
+    id: "tower-defense",
+    title: "方块世界塔防",
+    desc: "Minecraft风格3D塔防游戏。建造箭塔抵御僵尸入侵，击杀获取资源，支持触屏和键鼠操作。",
+    tags: ["visual", "interactive", "html"],
+    date: "2026-08-23",
+    href: "works/tower-defense.html"
+  },
 
   // ─────────────────────────────────────────────────────────────
   // 📌 添加新作品示例（复制下面取消注释即可）：
