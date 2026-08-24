@@ -29,14 +29,15 @@ canvas{position:fixed;inset:0;width:100%;height:100%}
 .hs .ct{position:absolute;bottom:2px;right:4px;font-size:10px;color:#fff;text-shadow:1px 1px 1px #000}
 .hs .lb{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:9px;color:#aaa;white-space:nowrap}
 .hs.act .lb{color:#ffd93d}
-#touch{position:fixed;bottom:0;left:0;right:0;height:180px;pointer-events:auto;z-index:20}
-#joy{position:absolute;left:20px;bottom:20px;width:120px;height:120px;background:rgba(255,255,255,.1);border-radius:50%;border:2px solid rgba(255,255,255,.2)}
-#joy-k{position:absolute;width:48px;height:48px;background:rgba(255,255,255,.3);border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%)}
-.tb{position:absolute;width:56px;height:56px;background:rgba(255,255,255,.12);border-radius:50%;border:2px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;pointer-events:auto}
-#b-jump{right:20px;bottom:65px}
-#b-act{right:88px;bottom:65px;background:rgba(255,120,60,.22);border-color:rgba(255,120,60,.4)}
-#b-act span{font-size:10px;margin-top:2px}
-#b-del{right:20px;bottom:135px;background:rgba(255,60,60,.22);border-color:rgba(255,60,60,.4)}
+#touch{position:fixed;bottom:0;left:0;right:0;height:220px;pointer-events:none;z-index:20}
+#joy{position:absolute;left:24px;bottom:24px;width:150px;height:150px;background:rgba(255,255,255,.1);border-radius:50%;border:2px solid rgba(255,255,255,.2);pointer-events:auto}
+#joy-k{position:absolute;width:60px;height:60px;background:rgba(255,255,255,.3);border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%)}
+.tb{position:absolute;width:68px;height:68px;background:rgba(255,255,255,.12);border-radius:50%;border:2px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;pointer-events:auto;user-select:none;-webkit-user-select:none;touch-action:none}
+#b-jump{right:24px;bottom:80px}
+#b-act{right:100px;bottom:80px;background:rgba(255,120,60,.22);border-color:rgba(255,120,60,.4);flex-direction:column}
+#b-act span{font-size:11px;margin-top:2px}
+#b-del{right:24px;bottom:160px;background:rgba(255,60,60,.22);border-color:rgba(255,60,60,.4)}
+.tb:active{background:rgba(255,255,255,.3);transform:scale(.92)}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;color:#fff}
 .ov h1{font-size:30px;margin-bottom:8px}.ov .sub{color:#aaa;font-size:13px;margin-bottom:18px;text-align:center;line-height:1.7}
 .ov button{padding:12px 36px;font-size:16px;border:none;border-radius:6px;cursor:pointer;margin:5px;color:#fff;font-family:inherit}
@@ -81,8 +82,9 @@ WASD移动 | 鼠标视角 | 左键建造 | 右键拆除<br>
 </div>
 <div class="sub" style="font-size:11px;color:#888">
 <b style="color:#ffd93d">平板操作：</b><br>
-左摇杆移动 | 屏幕中央准星瞄准<br>
-点击底部⬜围墙/🏹箭塔切换 | 🔨建造 ❌拆除
+左摇杆移动 | <b style="color:#fff">拖动屏幕转动视角</b><br>
+点击底部⬜围墙/🏹箭塔切换 | 🔨建造 ❌拆除<br>
+中央准星对准位置 → 点🔨建造
 </div>
 <button class="bgo" id="btn-go">⚔️ 开始战斗</button>
 </div>
@@ -227,15 +229,17 @@ if(P.pos.y<-5){P.pos.y=15;P.vel.set(0,0,0)}
 P.hcd=Math.max(0,P.hcd-dt)}
 
 // Block targeting
-function getTarget(){
-rc.setFromCamera(ndc,cam);
-const allMeshes=[...Object.values(tm),...Object.values(bm)].filter(m=>!!m);
-const hits=rc.intersectObjects(allMeshes,false);
-if(!hits.length)return null;
-const p=hits[0].point,n=hits[0].face.normal;
-return{
-x:Math.floor(p.x-n.x*.5),y:Math.floor(p.y-n.y*.5),z:Math.floor(p.z-n.z*.5),
-nx:Math.floor(p.x+n.x*.5),ny:Math.floor(p.y+n.y*.5),nz:Math.floor(p.z+n.z*.5)}}
+function getTarget(nx,ny){
+  const vx=(nx!==undefined)?nx:ndc.x, vy=(ny!==undefined)?ny:ndc.y;
+  rc.setFromCamera(new T.Vector2(vx,vy),cam);
+  const allMeshes=[...Object.values(tm),...Object.values(bm)].filter(m=>!!m);
+  const hits=rc.intersectObjects(allMeshes,false);
+  if(!hits.length)return null;
+  const p=hits[0].point,n=hits[0].face.normal;
+  return{
+    x:Math.floor(p.x-n.x*.5),y:Math.floor(p.y-n.y*.5),z:Math.floor(p.z-n.z*.5),
+    nx:Math.floor(p.x+n.x*.5),ny:Math.floor(p.y+n.y*.5),nz:Math.floor(p.z+n.z*.5)}}
+
 
 // Highlight
 let hlMesh=null;
@@ -257,38 +261,38 @@ previewMesh=new T.Mesh(new T.BoxGeometry(1,1,1),new T.MeshBasicMaterial({color:0
 previewMesh.visible=false;sc.add(previewMesh)}
 
 // Build actions
-function doBuild(){
-const t=getTarget();if(!t)return;
-const it=hbar[slot];
-if(it===10){
-// Wall - needs stone, place at target
-if(stone<=0){showToast("石头不足！");return}
-if(bb(t.nx,t.ny,t.nz)||gb(t.nx,t.ny,t.nz))return;
-// Don't build too high
-if(t.ny>getH(t.nx,t.nz)+6)return;
-stone--;
-builtBlocks.set(t.nx+","+t.ny+","+t.nz,BW.WALL);
-rebuildBuilt();showToast("🧱 建造围墙")}
-else if(it===11){
-// Arrow Tower - needs iron, place at target
-if(iron<=0){showToast("铁块不足！");return}
-if(bb(t.nx,t.ny,t.nz)||gb(t.nx,t.ny,t.nz))return;
-if(t.ny>getH(t.nx,t.nz)+6)return;
-iron--;
-// Arrow Tower = wooden base + walls + pointed top
-const bx=t.nx,by=t.ny,bz=t.nz;
-builtBlocks.set(bx+","+by+","+bz,BW.TOWER);
-builtBlocks.set(bx+","+(by+1)+","+bz,BW.TOWER);
-builtBlocks.set(bx+","+(by+2)+","+bz,BW.TOWER);
-builtBlocks.set(bx+","+(by+3)+","+bz,BW.TOWER_TOP);
-// Create tower entity with arrow tower properties
-towers.push({x:bx+.5,y:by+4,z:bz+.5,hp:15,atk:4,range:14,cd:0,key:bx+","+by+","+bz,type:"arrow"});
-rebuildBuilt();showToast("🏹 建造箭塔！")}
+function doBuild(t){
+  if(!t)t=getTarget();if(!t)return;
+  const it=hbar[slot];
+  if(it===10){
+    // Wall - needs stone, place at target
+    if(stone<=0){showToast("石头不足！");return}
+    if(bb(t.nx,t.ny,t.nz)||gb(t.nx,t.ny,t.nz))return;
+    // Don't build too high
+    if(t.ny>getH(t.nx,t.nz)+6)return;
+    stone--;
+    builtBlocks.set(t.nx+","+t.ny+","+t.nz,BW.WALL);
+    rebuildBuilt();showToast("🧱 建造围墙")}
+  else if(it===11){
+    // Arrow Tower - needs iron, place at target
+    if(iron<=0){showToast("铁块不足！");return}
+    if(bb(t.nx,t.ny,t.nz)||gb(t.nx,t.ny,t.nz))return;
+    if(t.ny>getH(t.nx,t.nz)+6)return;
+    iron--;
+    // Arrow Tower = wooden base + walls + pointed top
+    const bx=t.nx,by=t.ny,bz=t.nz;
+    builtBlocks.set(bx+","+by+","+bz,BW.TOWER);
+    builtBlocks.set(bx+","+(by+1)+","+bz,BW.TOWER);
+    builtBlocks.set(bx+","+(by+2)+","+bz,BW.TOWER);
+    builtBlocks.set(bx+","+(by+3)+","+bz,BW.TOWER_TOP);
+    // Create tower entity with arrow tower properties
+    towers.push({x:bx+.5,y:by+4,z:bz+.5,hp:15,atk:4,range:14,cd:0,key:bx+","+by+","+bz,type:"arrow"});
+    rebuildBuilt();showToast("🏹 建造箭塔！")}
 }
 
-function doDemolish(){
-const t=getTarget();if(!t)return;
-const k=t.x+","+t.y+","+t.z;
+function doDemolish(t){
+  if(!t)t=getTarget();if(!t)return;
+  const k=t.x+","+t.y+","+t.z;
 const bt=builtBlocks.get(k);
 if(!bt){showToast("无可拆除的方块");return}
 if(bt===BW.WALL){stone++;builtBlocks.delete(k);showToast("⬜ 回收石头")}
@@ -631,23 +635,56 @@ P:{get:()=>P}
 window.createZombie=createZombie;window.killZ=killZ;window.spawnWave=spawnWave;
 window.damagePlayer=damagePlayer;window.collides=collides;window.rebuildBuilt=rebuildBuilt;
 
-// Touch
-let joyActive=false,joySX=0,joySY=0;
+// Touch controls
+let joyActive=false,joySX=0,joySY=0,joyId=null;
 const joyEl=$("joy"),joyK=$("joy-k");
-joyEl.addEventListener("touchstart",e=>{e.preventDefault();joyActive=true;
-const r=joyEl.getBoundingClientRect();joySX=r.left+r.width/2;joySY=r.top+r.height/2},{passive:false});
+joyEl.addEventListener("touchstart",e=>{e.preventDefault();
+  if(joyId!==null)return;
+  const t=e.changedTouches[0];joyId=t.identifier;
+  const r=joyEl.getBoundingClientRect();joySX=r.left+r.width/2;joySY=r.top+r.height/2;joyActive=true},{passive:false});
 joyEl.addEventListener("touchmove",e=>{e.preventDefault();if(!joyActive)return;
-const t=e.touches[0];const dx=t.clientX-joySX,dy=t.clientY-joySY;
-const maxD=45;const cx=C(dx,-maxD,maxD),cy=C(dy,-maxD,maxD);
-joyK.style.transform="translate("+(cx/maxD*22)+"px,"+(cy/maxD*22)+"px)";
-jF=dy<-18?1:0;jB=dy>18?1:0;jL=dx<-18?1:0;jR=dx>18?1:0},{passive:false});
-const endJoy=()=>{joyActive=false;jF=jB=jL=jR=0;joyK.style.transform="translate(-50%,-50%)"};
+  let t=null;for(const ct of e.changedTouches)if(ct.identifier===joyId){t=ct;break}
+  if(!t)return;
+  const dx=t.clientX-joySX,dy=t.clientY-joySY;
+  const maxD=55;const cx=C(dx,-maxD,maxD),cy=C(dy,-maxD,maxD);
+  joyK.style.transform="translate("+(cx/maxD*26)+"px,"+(cy/maxD*26)+"px)";
+  jF=dy<-22?1:0;jB=dy>22?1:0;jL=dx<-22?1:0;jR=dx>22?1:0},{passive:false});
+const endJoy=e=>{for(const ct of e.changedTouches)if(ct.identifier===joyId){joyId=null;joyActive=false;jF=jB=jL=jR=0;joyK.style.transform="translate(-50%,-50%)"}};
 joyEl.addEventListener("touchend",endJoy);joyEl.addEventListener("touchcancel",endJoy);
 $("b-jump").addEventListener("touchstart",e=>{e.preventDefault();jJ=1},{passive:false});
 $("b-jump").addEventListener("touchend",()=>{jJ=0});
 $("b-jump").addEventListener("touchcancel",()=>{jJ=0});
 $("b-act").addEventListener("touchstart",e=>{e.preventDefault();doBuild()},{passive:false});
 $("b-del").addEventListener("touchstart",e=>{e.preventDefault();doDemolish()},{passive:false});
+
+// Touch camera look (drag anywhere on canvas that isn't a control)
+let lookIds={};
+cv.addEventListener("touchstart",e=>{e.preventDefault();
+  for(const t of e.changedTouches)lookIds[t.identifier]={x:t.clientX,y:t.clientY,sx:t.clientX,sy:t.clientY,t0:performance.now()};},{passive:false});
+cv.addEventListener("touchmove",e=>{e.preventDefault();
+  for(const t of e.changedTouches){
+    const p=lookIds[t.identifier];if(!p)continue;
+    const dx=t.clientX-p.x,dy=t.clientY-p.y;
+    P.yaw-=dx*.006;P.pitch=C(P.pitch-dy*.006,-1.5,1.5);
+    p.x=t.clientX;p.y=t.clientY;}},{passive:false});
+const endLook=e=>{for(const t of e.changedTouches){
+  const p=lookIds[t.identifier];if(!p)continue;
+  const moved=Math.hypot(t.clientX-p.sx,t.clientY-p.sy);
+  const dur=performance.now()-p.t0;
+  // Quick tap (no drag) = build at tapped point
+  if(moved<12&&dur<300){buildAtPoint(t.clientX,t.clientY)}
+  delete lookIds[t.identifier];}};
+cv.addEventListener("touchend",endLook);cv.addEventListener("touchcancel",endLook);
+
+// Build at an arbitrary screen point (tablet tap-to-build)
+function buildAtPoint(cx,cy){
+  const rect=cv.getBoundingClientRect();
+  const nx=((cx-rect.left)/rect.width)*2-1;
+  const ny=-((cy-rect.top)/rect.height)*2+1;
+  const t=getTarget(nx,ny);
+  if(!t){showToast("请对准地面或方块");return}
+  doBuild(t);
+}
 
 // Keyboard/mouse
 let mouseDown={};
