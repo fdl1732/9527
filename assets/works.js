@@ -44,6 +44,14 @@ const works = [
     date: "2026-08-23",
     href: "works/tower-defense.html"
   },
+  {
+    id: "mc-pvp",
+    title: "方块对战 · 红蓝射击",
+    desc: "Minecraft风格第一人称红蓝对战射击。可破坏树木/墙体并自动恢复，不同电脑联网对打，支持平板触屏与电脑键鼠。",
+    tags: ["visual", "interactive", "html"],
+    date: "2026-08-24",
+    href: "works/mc-pvp.html"
+  },
 
   // ─────────────────────────────────────────────────────────────
   // 📌 添加新作品示例（复制下面取消注释即可）：
