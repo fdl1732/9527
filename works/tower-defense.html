@@ -79,6 +79,11 @@ canvas{position:fixed;inset:0;width:100%;height:100%}
 WASD移动 | 鼠标视角 | 左键建造 | 右键拆除<br>
 空格跳跃 | 1/2切换物品 | 滚轮切换 | Q/E建造 | X/R拆除
 </div>
+<div class="sub" style="font-size:11px;color:#888">
+<b style="color:#ffd93d">平板操作：</b><br>
+左摇杆移动 | 屏幕中央准星瞄准<br>
+点击底部⬜围墙/🏹箭塔切换 | 🔨建造 ❌拆除
+</div>
 <button class="bgo" id="btn-go">⚔️ 开始战斗</button>
 </div>
 <div class="ov" id="ov-death" style="display:none">
@@ -104,7 +109,7 @@ function fbm2(x,z,oct){let v=0,a=1,f=1;for(let i=0;i<oct;i++){v+=a*noise2(x*f,z*
 
 const W=60,D=60;
 const BL={AIR:0,GRASS:1,DIRT:2,STONE:3,WATER:4};
-const BC={1:0x5aa832,2:0x8b6914,3:0x888888,4:0x2255aa};
+const BC={1:0x5fb84f,2:0x866043,3:0x888888,4:0x2255aa}; // 草绿/泥土棕/石头灰/水蓝 - 模仿我的世界
 // Player built blocks
 const BW={WALL:10,TOWER:11,TOWER_TOP:12,BULLET:13,TRAIL:14};
 const BWC={10:0x999999,11:0x8B4513,12:0xCD853F,13:0xffff00,14:0xff8800};
