@@ -79,8 +79,9 @@
   <button id="restart-btn">重新开始</button>
 </div>
 <div class="overlay hidden" id="overlay-error">
-  <h1>⚠️ 加载失败</h1>
+  <h1 id="error-title">⚠️ 加载失败</h1>
   <div class="sub" id="error-msg">资源加载失败</div>
+  <div class="tips" id="error-stack" style="color:#ff9a9a;font-size:13px;margin-top:14px;max-width:680px;word-break:break-all;"></div>
 </div>
 <script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }</script>
 <script src="https://unpkg.com/mqtt@5.3.3/dist/mqtt.min.js"></script>
@@ -91,8 +92,9 @@ import * as THREE from 'three';
 const rand=(a,b)=>a+Math.random()*(b-a);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const $=id=>document.getElementById(id);
-function showError(msg){$('error-msg').textContent=msg;$('overlay-error').classList.remove('hidden')}
-window.addEventListener('error',e=>showError('加载失败：'+(e.message||'网络错误')));
+function showError(msg,title,stack){if(title){const t=$('error-title');if(t)t.textContent=title;}const s=$('error-stack');if(s)s.textContent=stack||'';$('error-msg').textContent=msg;$('overlay-error').classList.remove('hidden')}
+function _errTag(e){return e&&e.stack?String(e.stack).split('\n').slice(0,2).join(' ← '):(e&&e.message||'未知')}
+window.addEventListener('error',e=>{console.error('GLOBAL_ERROR:',e.error);showError('加载失败：'+(e.message||'网络错误'),'⚠️ 全局/加载错误',_errTag(e.error));});
 
 // ============================ 渲染器 ============================
 const canvas=$('game');
@@ -385,7 +387,7 @@ function shoot(){try{
   if(!target)return;
   spawnImpact(target.point,0xffdd44,false,9);
   if(target===zHit)damageZombie(zHit.group,1,target.point);
-}catch(e){console.error("SHOOT_ERROR:",e.message,e.stack);showError("射击错误: "+e.message)}}
+}catch(e){console.error("SHOOT_ERROR:",e.message,e.stack);showError("射击错误: "+e.message,"⚠️ 射击错误",_errTag(e))}}
 function damageZombie(z,dmg,point){const st=z.userData.z;if(st.dead)return;st.hp-=dmg;st.flashT=0.15;if(point)spawnImpact(point,0xff4444,false,4);if(st.hp<=0)killZombie(z)}
 function updateShoot(dt){
   shootCd-=dt;
@@ -428,11 +430,11 @@ function netStart(){
     c.subscribe("game/"+room+"/#");
     c.publish("game/"+room+"/join",JSON.stringify({id:myId,name:myName}));
     c.on("message",(topic,msg)=>{try{handleNet(JSON.parse(msg.toString()))}catch(_){}});
-    setInterval(()=>{
+    setInterval(()=>{try{
       if(!netOk)return;_updateHost();
       netSend({t:"hb",id:myId,name:myName,x:+player.pos.x.toFixed(1),y:+player.pos.y.toFixed(1),z:+player.pos.z.toFixed(1),yaw:+player.yaw.toFixed(2),hp:player.health,wave,waveT:Math.max(0,waveTimer)},0);
       if(isHost){const zs=[];for(const z of zombies){if(z.userData.z.dead)continue;zs.push({x:+z.position.x.toFixed(1),y:+z.position.y.toFixed(1),z:+z.position.z.toFixed(1),hp:z.userData.z.hp})}netSend({t:"zs",zs},0)}
-    },100);
+    }catch(e){console.error("NET_INTERVAL_ERROR:",e.message,e.stack);showError("联机错误: "+e.message,"⚠️ 联机错误",_errTag(e))}},100);
     toast("✅ 联机成功"+(_allIds.length>1?"（"+_allIds.length+"人在线）":""));
   }).catch(()=>{toast("联机失败（单机模式）")});
 }
@@ -473,7 +475,7 @@ function updateCamera(dt){
   if(shakeAmp>0.001){camera.position.x+=rand(-1,1)*shakeAmp*0.45;camera.position.y+=rand(-1,1)*shakeAmp*0.45;camera.position.z+=rand(-1,1)*shakeAmp*0.45;shakeAmp*=Math.exp(-5.5*dt)}
   camera.rotation.set(player.pitch+recoil*0.07,player.yaw,0);
 }
-function animate(){
+function animate(){try{
   requestAnimationFrame(animate);
   const dt=Math.min(clock.getDelta(),0.05);
   updateClouds(dt);updateRings(dt);updateBoomLight(dt);updateTimers(dt);particles.update(dt);
@@ -486,7 +488,7 @@ function animate(){
   const fl=$('flash');if(parseFloat(fl.style.opacity||0)>0)fl.style.opacity=Math.max(0,parseFloat(fl.style.opacity)-dt*2.5);
   updateCamera(dt);renderer.render(scene,camera);
   $('online-info').textContent='玩家 '+(peers.size+1)+(netOk?(isHost?' (主机)':' (客户端)'):' (单机)');
-}
+}catch(e){console.error("ANIM_ERROR:",e.message,e.stack);showError("运行错误: "+e.message,"⚠️ 运行错误",_errTag(e))}}
 
 // ============================ 启动 ============================
 function startGame(){
