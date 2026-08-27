@@ -293,7 +293,7 @@ function playShoot(){noiseBurst(0.14,1400,0.35)}
 function playHurt(){try{const c=ac();const o=c.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(160,c.currentTime);o.frequency.exponentialRampToValueAtTime(60,c.currentTime+0.25);const g=c.createGain();g.gain.setValueAtTime(0.2,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.3);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.32)}catch(e){}}
 
 // ============================ 僵尸 ============================
-const zombies=[];let wave=0;
+const zombies=[];let wave=0;let score=0;
 function createZombie(x,z){
   const g=new THREE.Group();
   const mBody=new THREE.MeshLambertMaterial({color:0x5d8c4a});
