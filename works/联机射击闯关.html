@@ -371,7 +371,7 @@ const gunGroup=new THREE.Group();
 const muzzleLight=new THREE.PointLight(0xffdd66,0,12);gunGroup.add(muzzleLight);
 const raycaster=new THREE.Raycaster();const ndc=new THREE.Vector2(0,0);
 function spawnImpact(point,color,big,count){const n=count||(big?14:9);for(let i=0;i<n;i++){const a2=rand(0,Math.PI*2),b=rand(0.2,3);const sp=rand(2,big?9:6);particles.spawn({x:point.x,y:point.y,z:point.z,vx:Math.sin(b)*Math.cos(a2)*sp,vy:Math.abs(Math.sin(b))*sp,vz:Math.sin(b)*Math.sin(a2)*sp,life:rand(0.15,0.4),size:big?rand(0.25,0.5):rand(0.15,0.35),gravity:6,color})}if(big)spawnRing(point,3)}
-function shoot(){
+function shoot(){try{
   recoil=1;muzzleT=0.06;gunGroup.userData.muzzle.visible=true;muzzleLight.intensity=30;playShoot();
   for(let i=0;i<4;i++)particles.spawn({x:player.pos.x,y:player.pos.y+EYE,z:player.pos.z,vx:rand(-0.6,0.6),vy:rand(-0.4,0.4),vz:rand(-0.6,0.6),life:rand(0.06,0.15),size:rand(0.2,0.45),gravity:0,color:0xffdd44});
   raycaster.setFromCamera(ndc,camera);
@@ -385,7 +385,7 @@ function shoot(){
   if(!target)return;
   spawnImpact(target.point,0xffdd44,false,9);
   if(target===zHit)damageZombie(zHit.group,1,target.point);
-}
+}catch(e){console.error("SHOOT_ERROR:",e.message,e.stack);showError("射击错误: "+e.message)}}
 function damageZombie(z,dmg,point){const st=z.userData.z;if(st.dead)return;st.hp-=dmg;st.flashT=0.15;if(point)spawnImpact(point,0xff4444,false,4);if(st.hp<=0)killZombie(z)}
 function updateShoot(dt){
   shootCd-=dt;
