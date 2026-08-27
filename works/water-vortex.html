@@ -80,8 +80,8 @@
         //  SCENE SETUP
         // ═══════════════════════════════════════════════════════════
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x050a18);
-        scene.fog = new THREE.FogExp2(0x050a18, 0.0030);
+        scene.background = new THREE.Color(0x0a1e2e);
+        scene.fog = new THREE.FogExp2(0x0a1e2e, 0.0025);
 
         const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 500);
         camera.position.set(12, 8, 16);
@@ -130,7 +130,7 @@
             }
             gw.setAttribute('position', new THREE.BufferAttribute(pw, 3));
             const mw = new THREE.PointsMaterial({
-                color: 0x6688cc, size: 0.15, transparent: true, opacity: 0.4,
+                color: 0x337799, size: 0.10, transparent: true, opacity: 0.12,
                 depthWrite: false, blending: THREE.AdditiveBlending,
             });
             g.add(new THREE.Points(gw, mw));
@@ -188,53 +188,120 @@
             const mat = new THREE.ShaderMaterial({
                 uniforms: {
                     uTime: { value: 0 },
-                    uColor: { value: new THREE.Color(0x1a4a8a) },
+                    uLightDir: { value: new THREE.Vector3(0.3, 0.8, 0.5).normalize() },
                 },
                 vertexShader: `
-                    varying vec2 vUv; varying vec3 vNorm; varying vec3 vPos;
+                    uniform float uTime;
+                    varying vec2 vUv;
+                    varying vec3 vPos;
+
                     void main() {
-                        vUv = uv; vNorm = normalize(normalMatrix * normal);
-                        vec4 mPos = modelMatrix * vec4(position, 1.0);
+                        vUv = uv;
+                        vec3 pos = position;
+                        float angle = atan(pos.z, pos.x);
+                        float radius = length(pos.xz);
+                        float h = uv.y;
+
+                        // 5-Octave Gerstner waves for natural water surface
+                        float amp[5]; float freq[5]; float spd[5]; float stp[5]; float dx[5]; float dy[5];
+                        amp[0]=0.10; freq[0]=1.2; spd[0]=0.6; stp[0]=0.35; dx[0]=1.0; dy[0]=0.4;
+                        amp[1]=0.07; freq[1]=1.8; spd[1]=0.7; stp[1]=0.30; dx[1]=0.5; dy[1]=1.0;
+                        amp[2]=0.05; freq[2]=2.5; spd[2]=0.5; stp[2]=0.25; dx[2]=1.5; dy[2]=-0.5;
+                        amp[3]=0.03; freq[3]=3.5; spd[3]=0.9; stp[3]=0.20; dx[3]=2.0; dy[3]=0.3;
+                        amp[4]=0.02; freq[4]=5.0; spd[4]=1.0; stp[4]=0.15; dx[4]=0.8; dy[4]=-0.6;
+
+                        float totalU = 0.0, totalV = 0.0, totalY = 0.0;
+
+                        for (int i = 0; i < 5; i++) {
+                            float theta = dx[i] * angle + dy[i] * h * 6.28;
+                            float phi = freq[i] * theta + uTime * spd[i];
+                            float S = sin(phi);
+                            float C = cos(phi);
+                            float Qi = stp[i] / (freq[i] * amp[i] * 5.0);
+                            totalU += Qi * amp[i] * dx[i] * C;
+                            totalV += Qi * amp[i] * dy[i] * C;
+                            totalY += amp[i] * S;
+                        }
+
+                        float hF = 0.2 + 0.8 * h;
+                        float newAngle = angle + totalU * 0.4 * hF;
+                        float newR = max(0.05, radius + totalY * 0.55 * hF);
+                        float newY = pos.y + totalV * 0.25 * hF;
+
+                        pos.x = newR * cos(newAngle);
+                        pos.z = newR * sin(newAngle);
+                        pos.y = newY;
+
+                        vec4 mPos = modelMatrix * vec4(pos, 1.0);
                         vPos = mPos.xyz;
                         gl_Position = projectionMatrix * viewMatrix * mPos;
                     }
                 `,
                 fragmentShader: `
-                    uniform vec3 uColor; uniform float uTime;
-                    varying vec2 vUv; varying vec3 vNorm; varying vec3 vPos;
+                    uniform float uTime;
+                    uniform vec3 uLightDir;
+                    varying vec2 vUv;
+                    varying vec3 vPos;
 
                     void main() {
-                        // Fresnel-like edge glow
-                        vec3 viewDir = normalize(cameraPosition - vPos);
-                        float fresnel = 1.0 - max(dot(vNorm, viewDir), 0.0);
-                        fresnel = pow(fresnel, 2.5);
+                        // Screen-space derivative normals (capture Gerstner wave detail)
+                        vec3 fdx = dFdx(vPos);
+                        vec3 fdy = dFdy(vPos);
+                        vec3 N = normalize(cross(fdx, fdy));
 
-                        // depth tint: darker at bottom
+                        vec3 V = normalize(cameraPosition - vPos);
+                        vec3 L = normalize(uLightDir);
+                        vec3 H = normalize(L + V);
+
+                        float fresnel = 1.0 - max(dot(N, V), 0.0);
+                        fresnel = pow(fresnel, 3.0);
+
                         float depth = 1.0 - vUv.y;
 
-                        // base water color
-                        vec3 waterColor = mix(
-                            vec3(0.05, 0.15, 0.35),
-                            vec3(0.10, 0.30, 0.55),
-                            depth
-                        );
+                        // ═══ Flowing water texture ═══
+                        float angle = atan(vPos.x, vPos.z);
+                        float radius = length(vPos.xz);
 
-                        // surface foam hints at top
-                        float foam = 0.0;
-                        if (vUv.y > 0.92) {
-                            foam = 0.15 * (0.5 + 0.5 * sin(vUv.x * 40.0 + uTime * 0.5 + vUv.y * 20.0));
-                        }
+                        float c1 = 0.5 + 0.5 * sin(angle * 4.0 + uTime * 0.6 + vUv.y * 5.0);
+                        float c2 = 0.5 + 0.5 * sin(angle * 6.0 - uTime * 0.8 + vUv.y * 7.0 + 1.2);
+                        float rd = 0.5 + 0.5 * sin(radius * 3.0 - uTime * 0.5 + vUv.y * 4.0);
+                        float vt = 0.5 + 0.5 * sin(vUv.y * 10.0 - uTime * 0.7 + angle * 3.0);
+                        float dt = 0.5 + 0.5 * sin(vUv.x * 25.0 + vUv.y * 18.0 + uTime * 1.0);
+                        float flow = c1 * 0.30 + c2 * 0.25 + rd * 0.20 + vt * 0.15 + dt * 0.10;
 
-                        // ripple shimmer
-                        float shimmer = 0.05 * sin(vUv.x * 30.0 + vUv.y * 20.0 + uTime * 0.6);
+                        // ═══ Caustic light patterns ═══
+                        float caust1 = 0.5 + 0.5 * sin(angle * 8.0 + vUv.y * 12.0 + uTime * 0.8);
+                        float caust2 = 0.5 + 0.5 * sin(angle * 5.0 - vUv.y * 15.0 + uTime * 1.2 + radius * 2.0);
+                        float caust3 = 0.5 + 0.5 * sin(angle * 12.0 + vUv.y * 8.0 - uTime * 0.6 + radius * 3.0);
+                        float caustics = caust1 * caust2 * 0.7 + caust3 * 0.3;
+                        caustics = pow(caustics, 1.5);
 
-                        vec3 finalColor = waterColor + vec3(0.3, 0.4, 0.6) * fresnel * 0.5 + vec3(foam) + vec3(shimmer);
+                        // ═══ Blinn-Phong specular ═══
+                        float spec = pow(max(dot(N, H), 0.0), 64.0);
+                        float specShimmer = pow(max(dot(N, H), 0.0), 128.0) * 0.5;
 
-                        // opacity: more transparent near top, more opaque lower
-                        float alpha = 0.20 + 0.35 * (1.0 - vUv.y);
+                        // ═══ Lake water color ═══
+                        vec3 deepC = vec3(0.02, 0.12, 0.18);
+                        vec3 shalC = vec3(0.06, 0.30, 0.35);
+                        vec3 waterC = mix(deepC, shalC, depth);
+
+                        vec3 caustC = vec3(0.15, 0.40, 0.35) * caustics * 0.4;
+                        vec3 flowC = vec3(0.10, 0.32, 0.40) * flow * 0.5;
+
+                        vec3 rimC = mix(
+                            vec3(0.20, 0.45, 0.55),
+                            vec3(0.60, 0.75, 0.85),
+                            fresnel
+                        ) * fresnel * 0.6;
+
+                        vec3 specC = vec3(0.90, 0.95, 1.0) * (spec * 0.8 + specShimmer);
+
+                        vec3 finalC = waterC + caustC + flowC + rimC + specC;
+
+                        float alpha = 0.20 + 0.40 * (1.0 - vUv.y);
                         alpha += fresnel * 0.15;
 
-                        gl_FragColor = vec4(finalColor, alpha);
+                        gl_FragColor = vec4(finalC, alpha);
                     }
                 `,
                 transparent: true,
@@ -265,31 +332,6 @@
 
         const water = createWaterSurface();
         scene.add(water.group);
-
-        // ═══════════════════════════════════════════════════════════
-        //  GLOW RINGS  (water current indicators)
-        // ═══════════════════════════════════════════════════════════
-        const waterRings = [];
-        for (let i = 0; i < 8; i++) {
-            const t = 0.05 + (i / 7) * 0.90;
-            const r = VORTEX.bottomRadius + (VORTEX.topRadius - VORTEX.bottomRadius) * Math.pow(t, 0.7);
-            const y = t * VORTEX.height;
-            const ring = new THREE.Mesh(
-                new THREE.RingGeometry(r * 0.2, r * 0.9, 48),
-                new THREE.MeshBasicMaterial({
-                    color: new THREE.Color().setHSL(0.55 + i * 0.02, 0.5, 0.3 + i * 0.04),
-                    transparent: true,
-                    opacity: 0.04 + 0.03 * Math.sin(i * 1.3),
-                    side: THREE.DoubleSide,
-                    depthWrite: false,
-                    blending: THREE.AdditiveBlending,
-                })
-            );
-            ring.position.y = y;
-            ring.rotation.x = -Math.PI / 2;
-            waterRings.push(ring);
-            scene.add(ring);
-        }
 
         // ═══════════════════════════════════════════════════════════
         //  VORTEX PARTICLE SYSTEM  — 黄色大粒子
@@ -650,12 +692,11 @@
 
             // update water material
             water.mat.uniforms.uTime.value = elapsed;
-
-            // update rings
-            waterRings.forEach((r, i) => {
-                r.rotation.z = elapsed * 0.05 * (1 + (i % 3) * 0.3) * (i % 2 === 0 ? 1 : -1);
-                r.material.opacity = 0.04 + 0.03 * Math.sin(elapsed * 0.2 + i * 0.7);
-            });
+            // subtly rotate light for dynamic specular
+            const lAng = elapsed * 0.015;
+            water.mat.uniforms.uLightDir.value.set(
+                Math.sin(lAng) * 0.3, 0.8, Math.cos(lAng) * 0.5
+            ).normalize();
 
             // ripple ring
             rippleRing.material.opacity = 0.04 + 0.03 * Math.sin(elapsed * 0.3);
