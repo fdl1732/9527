@@ -52,6 +52,14 @@ const works = [
     date: "2026-08-24",
     href: "works/mc-pvp.html"
   },
+  {
+    id: "survival",
+    title: "生存挑战 · 联机塔防",
+    desc: "Minecraft风格3D生存游戏。建造围墙和箭塔抵御僵尸入侵，击杀获取资源，支持联机协作。",
+    tags: ["visual", "interactive", "html"],
+    date: "2026-08-27",
+    href: "works/survival.html"
+  },
 
   // ─────────────────────────────────────────────────────────────
   // 📌 添加新作品示例（复制下面取消注释即可）：
