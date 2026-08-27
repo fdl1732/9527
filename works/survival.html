@@ -60,6 +60,8 @@
     <div style="opacity:.8;font-size:12px" id="online-info">玩家 1</div>
     <div id="fps-info" style="opacity:.6;font-size:11px;color:#cfc"></div>
   </div>
+  <div id="perf-panel" style="position:fixed;top:6px;left:6px;background:rgba(0,0,0,.7);color:#0f0;font:11px/1.5 monospace;padding:6px 10px;border-radius:4px;z-index:90;display:none;pointer-events:none"></div>
+  <div id="qual-btn" style="position:fixed;bottom:80px;right:10px;background:rgba(0,0,0,.6);color:#fff;font:12px sans-serif;padding:6px 12px;border-radius:6px;z-index:90;cursor:pointer;user-select:none;-webkit-user-select:none">⚡ 流畅模式</div>
   <div id="hint">WASD移动 鼠标视角 空格跳<br>左键射击 右键/Q建造 X/R拆除<br>1/2或滚轮切换围墙⬜/箭塔🏹<br>R重生 ESC解锁鼠标</div>
   <div id="boss-warn"></div>
   <div id="hotbar"></div>
@@ -203,7 +205,7 @@ function breakBlock(x,y,z){const k=key(x,y,z),t=blocks.get(k);if(!t||!DEST.has(t
 
 /* ============================ three 基础 ============================ */
 const cv=document.getElementById('c');
-const renderer=new T.WebGLRenderer({canvas:cv,antialias:true});
+const renderer=new T.WebGLRenderer({canvas:cv,antialias:false,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
 renderer.setSize(innerWidth,innerHeight);
 const sc=new T.Scene();
@@ -876,17 +878,25 @@ function frame(){
   if(now%1000<20){peers.forEach((p,id)=>{if(now-p.last>6000)peers.delete(id);});}
 
   renderer.render(sc,cam);
-  // 自适应性能：每3秒测一次帧率，过低则降级
+  // 性能自适应 + 面板
   _qC++;
   if(now-_qT>3000){
     _lastFps=Math.round(_qC*1000/(now-_qT));_qT=now;_qC=0;
     if(_lastFps<22&&_qLevel===0){_qLevel=1;renderer.setPixelRatio(1);toast("已开启流畅模式");}
-    else if(_lastFps<14&&_qLevel===1){_qLevel=2;sc.fog.near=30;sc.fog.far=110;}
+    else if(_lastFps<14&&_qLevel===1){_qLevel=2;sc.fog.near=30;sc.fog.far=110;toast("已开启极速模式");}
+    const pp=$("perf-panel");
+    if(pp){pp.style.display='block';
+      const gpu=renderer.capabilities||{};
+      pp.textContent='FPS: '+_lastFps+'\n'+
+        'DPR: '+renderer.getPixelRatio()+'\n'+
+        '几何体: '+renderer.info.render.triangles+' tri / '+renderer.info.render.calls+' draw\n'+
+        '纹理: '+renderer.info.memory.textures+'\n'+
+        '模式: '+['高','流畅','极速'][_qLevel];}
   }
   requestAnimationFrame(frame);
 }
 
-/* ============================ 启动 ============================ */
+/* ============================ 启动（分帧避免卡死） ============================ */
 function start(){
   const btn=$("start");btn.disabled=true;btn.textContent="生成世界中…";
   setTimeout(()=>{
@@ -894,20 +904,44 @@ function start(){
   myName=($("name").value||"玩家").slice(0,12);
   room=($("room").value||"1").replace(/[^a-zA-Z0-9]/g,"")||"1";
   $("overlay").style.display="none";
-  genWorld(); rebuildTerrain();
-  me=newActor(myId,myName,0,true);
-  me.pos.copy(spawnPoint()); me.hp=100; me.kills=0; me.score=0; me.stone=15; me.iron=3; me.cd=0; me.alive=true;
-  sc.remove(me.mesh); // 第一人称：不显示自己身体
-  createHL();
-  initGun();
-  btn.dataset.ok=1;
-  netStart();
-  last=performance.now();
-  requestAnimationFrame(frame);
+  // 第1帧：生成地形数据
+  requestAnimationFrame(()=>{
+    genWorld();
+    // 第2帧：构建网格（最耗GPU的一步）
+    requestAnimationFrame(()=>{
+      rebuildTerrain();
+      // 第3帧：初始化游戏 + 启动循环
+      requestAnimationFrame(()=>{
+        me=newActor(myId,myName,0,true);
+        me.pos.copy(spawnPoint()); me.hp=100; me.kills=0; me.score=0; me.stone=15; me.iron=3; me.cd=0; me.alive=true;
+        sc.remove(me.mesh);
+        createHL(); initGun();
+        btn.dataset.ok=1;
+        netStart();
+        last=performance.now();
+        requestAnimationFrame(frame);
+      });
+    });
+  });
   }catch(err){btn.disabled=false;btn.textContent="启动失败："+err.message;}
   },50);
 }
 $("start").addEventListener("click",start);
+/* 品质切换按钮 */
+let _qualHigh=false;
+$("qual-btn").addEventListener("click",()=>{
+  _qualHigh=!_qualHigh;
+  if(_qualHigh){
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    sc.fog.near=70;sc.fog.far=220;
+    $("qual-btn").textContent="⚡ 流畅模式";toast("已切换到高画质");
+  }else{
+    renderer.setPixelRatio(1);
+    sc.fog.near=30;sc.fog.far=110;
+    $("qual-btn").textContent="✨ 高画质";toast("已切换到流畅模式");
+  }
+  _qLevel=_qualHigh?0:1;_qT=performance.now();_qC=0;
+});
 addEventListener("resize",()=>{renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();});
 </script>
 </body>
