@@ -1,191 +1,203 @@
-<!doctype html>
-<html lang="zh">
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>生存挑战</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>🏰 生存挑战</title>
 <style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  html,body{height:100%;overflow:hidden;background:#87ceeb;font-family:-apple-system,system-ui,"Microsoft YaHei",sans-serif;-webkit-user-select:none;user-select:none;touch-action:none}
-  #c{display:block;width:100vw;height:100vh}
-  #ui{position:fixed;inset:0;pointer-events:none}
-  #cross{position:absolute;left:50%;top:50%;width:18px;height:18px;transform:translate(-50%,-50%);opacity:.85}
-  #cross:before,#cross:after{content:"";position:absolute;background:#fff;box-shadow:0 0 2px #000}
-  #cross:before{left:8px;top:0;width:2px;height:18px}
-  #cross:after{top:8px;left:0;height:2px;width:18px}
-  #hp-wrap{position:absolute;top:10px;left:12px;width:170px;background:rgba(0,0,0,.55);border:2px solid #555;border-radius:4px;padding:3px}
-  #hp-bar{height:14px;width:100%;background:linear-gradient(#5fe03a,#3fae22);border-radius:2px;transition:width .15s}
-  #hp-text{position:absolute;right:6px;top:50%;transform:translateY(-50%);color:#fff;font-size:10px;font-weight:bold;text-shadow:1px 1px 2px #000}
-  #info{position:absolute;top:10px;right:12px;color:#fff;font-size:13px;text-shadow:1px 1px 2px #000;text-align:right;line-height:1.8}
-  #res span{margin-left:8px;padding:2px 6px;border-radius:3px;font-size:14px}
-  #stone-count{background:rgba(136,136,136,.5)}
-  #iron-count{background:rgba(204,136,68,.5);color:#ffd93d}
-  #wave-info{color:#f88;font-size:14px}
-  #score-info{color:#8f8}
-  #hotbar{position:absolute;bottom:92px;left:50%;transform:translateX(-50%);display:flex;gap:6px;padding:6px;background:rgba(0,0,0,.7);border:2px solid #666;border-radius:8px}
-  .hs{width:60px;height:60px;background:rgba(255,255,255,.1);border:3px solid #777;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:28px;position:relative;pointer-events:auto;transition:border-color .12s,background .12s}
-  .hs.act{border-color:#ffd93d;background:rgba(255,215,0,.22);box-shadow:0 0 12px rgba(255,215,0,.45)}
-  .hs .ct{position:absolute;bottom:2px;right:5px;font-size:12px;color:#fff;text-shadow:1px 1px 1px #000}
-  .hs .lb{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:11px;color:#aaa;white-space:nowrap}
-  .hs.act .lb{color:#ffd93d}
-  #boss-warn{position:absolute;top:20%;left:50%;transform:translateX(-50%);color:#f44;font-size:26px;font-weight:bold;text-shadow:2px 2px 4px #000;opacity:0;transition:opacity .5s}
-  #hpwrap{position:absolute;bottom:54px;left:50%;transform:translateX(-50%);width:260px;height:18px;background:rgba(0,0,0,.45);border-radius:9px;overflow:hidden;border:1px solid rgba(255,255,255,.4)}
-  #hp{height:100%;width:100%;background:linear-gradient(90deg,#3ad13a,#7be36b);transition:width .12s}
-  #hint{position:absolute;top:10px;right:12px;color:#fff;text-shadow:0 1px 2px #000;font-size:13px;text-align:right;line-height:1.5;opacity:.85}
-  #toast{position:absolute;top:70px;left:50%;transform:translateX(-50%);color:#fff;background:rgba(0,0,0,.5);padding:7px 16px;border-radius:10px;font-size:15px;opacity:0;transition:opacity .25s}
-  #center{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);color:#fff;font-size:26px;font-weight:700;text-shadow:0 2px 6px #000;text-align:center;opacity:0;transition:opacity .3s}
-  #joy{position:absolute;left:22px;bottom:22px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.35);pointer-events:auto}
-  #joyn{position:absolute;left:50%;top:50%;width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.55);transform:translate(-50%,-50%)}
-  #btns{position:absolute;right:18px;bottom:22px;display:flex;flex-direction:column;gap:12px;pointer-events:auto}
-  .btn{width:84px;height:64px;border-radius:14px;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.4);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;text-shadow:0 1px 2px #000}
-  .btn:active{background:rgba(255,255,255,.4)}
-  #overlay{position:fixed;inset:0;background:linear-gradient(160deg,#2a3a4a,#101820);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:16px;z-index:10}
-  #overlay h1{font-size:34px;letter-spacing:4px;text-shadow:0 2px 8px #000}
-  #overlay p{max-width:520px;text-align:center;color:#bcd;font-size:14px;line-height:1.7}
-  #overlay input{width:260px;padding:10px 12px;border-radius:8px;border:none;font-size:15px;text-align:center;background:#fff;color:#222}
-  #start{margin-top:8px;padding:11px 40px;font-size:18px;border:none;border-radius:10px;background:#3ad13a;color:#06320a;font-weight:700;cursor:pointer}
-  #start:active{transform:scale(.97)}
-  #vignette{position:fixed;inset:0;pointer-events:none;box-shadow:inset 0 0 120px 40px rgba(120,0,0,.0);transition:box-shadow .15s}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Microsoft YaHei",sans-serif;user-select:none;touch-action:none}
+canvas{position:fixed;inset:0;width:100%;height:100%}
+#hud{position:fixed;inset:0;pointer-events:none;z-index:10}
+#cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:24px;height:24px}
+#cross::before,#cross::after{content:"";position:absolute;background:rgba(255,255,255,.8)}
+#cross::before{left:50%;top:0;width:2px;height:100%;transform:translateX(-50%)}
+#cross::after{top:50%;left:0;height:2px;width:100%;transform:translateY(-50%)}
+#hp-wrap{position:absolute;top:10px;left:10px;width:160px;background:rgba(0,0,0,.55);border:2px solid #555;border-radius:4px;padding:3px}
+#hp-bar{height:14px;width:100%;background:linear-gradient(#5fe03a,#3fae22);border-radius:2px;transition:width .15s}
+#hp-text{position:absolute;right:6px;top:50%;transform:translateY(-50%);color:#fff;font-size:10px;font-weight:bold;text-shadow:1px 1px 2px #000}
+#info{position:absolute;top:10px;right:10px;color:#fff;font-size:12px;text-shadow:1px 1px 2px #000;text-align:right;line-height:1.8}
+#res{font-size:14px;margin-bottom:4px}
+#res span{margin-left:10px;padding:2px 6px;border-radius:3px}
+#stone-count{background:rgba(136,136,136,.5);color:#ccc}
+#iron-count{background:rgba(204,136,68,.5);color:#ffd93d}
+#wave-info{color:#f88;font-size:14px}
+#score-info{color:#8f8}
+#online-info{opacity:.8;font-size:11px}
+#hotbar{position:fixed;bottom:92px;left:50%;transform:translateX(-50%);display:flex;gap:6px;padding:6px;background:rgba(0,0,0,.7);border:2px solid #666;border-radius:8px;z-index:40;pointer-events:auto}
+.hs{width:64px;height:64px;background:rgba(255,255,255,.1);border:3px solid #777;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:32px;position:relative;cursor:pointer;pointer-events:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none;transition:border-color .12s,background .12s}
+.hs.act{border-color:#ffd93d;background:rgba(255,215,0,.22);box-shadow:0 0 12px rgba(255,215,0,.45)}
+.hs .ct{position:absolute;bottom:2px;right:5px;font-size:12px;color:#fff;text-shadow:1px 1px 1px #000}
+.hs .lb{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:11px;color:#aaa;white-space:nowrap}
+.hs.act .lb{color:#ffd93d}
+#touch{position:fixed;bottom:0;left:0;right:0;height:220px;pointer-events:none;z-index:20}
+#joy{position:absolute;left:24px;bottom:24px;width:150px;height:150px;background:rgba(255,255,255,.1);border-radius:50%;border:2px solid rgba(255,255,255,.2);pointer-events:auto}
+#joy-k{position:absolute;width:60px;height:60px;background:rgba(255,255,255,.3);border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%)}
+.tb{position:absolute;width:68px;height:68px;background:rgba(255,255,255,.12);border-radius:50%;border:2px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;pointer-events:auto;user-select:none;-webkit-user-select:none;touch-action:none}
+#b-jump{right:24px;bottom:80px}
+#b-act{right:100px;bottom:80px;background:rgba(255,120,60,.22);border-color:rgba(255,120,60,.4);flex-direction:column}
+#b-act span{font-size:11px;margin-top:2px}
+#b-del{right:24px;bottom:160px;background:rgba(255,60,60,.22);border-color:rgba(255,60,60,.4)}
+.tb:active{background:rgba(255,255,255,.3);transform:scale(.92)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;color:#fff}
+.ov h1{font-size:30px;margin-bottom:8px}.ov .sub{color:#aaa;font-size:13px;margin-bottom:18px;text-align:center;line-height:1.7}
+.ov button{padding:12px 36px;font-size:16px;border:none;border-radius:6px;cursor:pointer;margin:5px;color:#fff;font-family:inherit}
+.bgo{background:#4a8;font-size:18px}
+.brs{background:#f66}
+#toast{position:absolute;top:36%;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:8px 20px;border-radius:6px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:30}
+#toast.show{opacity:1}
+#boss-warn{position:absolute;top:20%;left:50%;transform:translateX(-50%);color:#f44;font-size:28px;font-weight:bold;text-shadow:2px 2px 4px #000;opacity:0;transition:opacity .5s;pointer-events:none}
+#ov-death{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;flex-direction:column;align-items:center;justify-content:center;color:#fff;z-index:100}
+#vignette{position:fixed;inset:0;pointer-events:none;z-index:15;box-shadow:inset 0 0 120px 40px rgba(120,0,0,0);transition:box-shadow .15s}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ui">
-  <div id="cross"></div>
-  <div id="hp-wrap"><div id="hp-bar"></div><span id="hp-text">100/100</span></div>
-  <div id="info">
-    <div id="res"><span id="stone-count">⬜ 0</span><span id="iron-count">🟠 0</span></div>
-    <div id="wave-info">准备开始</div>
-    <div id="score-info">🎯 0</div>
-    <div style="opacity:.8;font-size:12px" id="online-info">玩家 1</div>
-    <div id="fps-info" style="opacity:.6;font-size:11px;color:#cfc"></div>
-  </div>
-  <div id="perf-panel" style="position:fixed;top:6px;left:6px;background:rgba(0,0,0,.7);color:#0f0;font:11px/1.5 monospace;padding:6px 10px;border-radius:4px;z-index:90;display:none;pointer-events:none"></div>
-  <div id="qual-btn" style="position:fixed;bottom:80px;right:10px;background:rgba(0,0,0,.6);color:#fff;font:12px sans-serif;padding:6px 12px;border-radius:6px;z-index:90;cursor:pointer;user-select:none;-webkit-user-select:none">⚡ 流畅模式</div>
-  <div id="hint">WASD移动 鼠标视角 空格跳<br>左键射击 右键/Q建造 X/R拆除<br>1/2或滚轮切换围墙⬜/箭塔🏹<br>R重生 ESC解锁鼠标</div>
-  <div id="boss-warn"></div>
-  <div id="hotbar"></div>
-  <div id="hpwrap"><div id="hp"></div></div>
-  <div id="toast"></div>
-  <div id="center"></div>
-  <div id="joy"><div id="joyn"></div></div>
-  <div id="btns">
-    <div class="btn" id="bdel">❌拆除</div>
-    <div class="btn" id="bbuild">🔨建造</div>
-    <div class="btn" id="bshoot">射击</div>
-    <div class="btn" id="bjump">跳</div>
-  </div>
+<div id="hud">
+<div id="cross"></div>
+<div id="hp-wrap"><div id="hp-bar"></div><span id="hp-text">100/100</span></div>
+<div id="info">
+  <div id="res"><span id="stone-count">⬜ 0</span><span id="iron-count">🟠 0</span></div>
+  <div id="wave-info">准备开始</div>
+  <div id="score-info">🎯 0</div>
+  <div id="online-info">玩家 1</div>
+</div>
+<div id="boss-warn"></div>
+<div id="toast"></div>
 </div>
 <div id="vignette"></div>
-<div id="overlay">
-  <h1>生 存 挑 战</h1>
-  <p>多人合作生存。地图四角不断刷新僵尸，越往后越凶（每5波出BOSS）。<br>
-  ⬜ 石头 → 建造围墙阻挡僵尸　🟠 铁块 → 建造箭塔自动射击<br>
-  击杀僵尸获取资源，和好友进同一房间即可联机。</p>
-  <input id="name" placeholder="昵称（可空）" maxlength="12">
-  <input id="room" placeholder="房间号（如 1）" value="1" maxlength="8">
-  <button id="start">进入游戏</button>
+<div id="hotbar"></div>
+<div id="touch">
+<div id="joy"><div id="joy-k"></div></div>
+<div id="b-jump" class="tb">⬆</div>
+<div id="b-act" class="tb">🔨<span>建造</span></div>
+<div id="b-del" class="tb">❌</div>
 </div>
-<div class="ov" id="ov-death" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;flex-direction:column;align-items:center;justify-content:center;color:#fff;z-index:100">
-  <h1 style="font-size:30px;margin-bottom:8px">💀 你被僵尸击倒了</h1>
-  <div class="sub" id="dinfo" style="color:#aaa;font-size:14px;margin-bottom:18px"></div>
-  <button onclick="location.reload()" style="padding:12px 36px;font-size:16px;border:none;border-radius:6px;background:#f66;color:#fff;cursor:pointer">重新开始</button>
+<div class="ov" id="overlay">
+<h1>🏰 生存挑战</h1>
+<div class="sub">
+⬜ 石头 → 建造围墙阻挡僵尸<br>
+🟠 铁块 → 建造箭塔自动射击<br>
+🏹 击杀僵尸获取资源，和好友进同一房间即可联机。
 </div>
-<script type="importmap">
-{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
-</script>
+<div class="sub" style="font-size:11px;color:#888">
+<b style="color:#ffd93d">PC操作：</b><br>
+WASD移动 | 鼠标视角 | 左键射击 | 右键/Q/E建造<br>
+空格跳跃 | 1/2切换物品 | 滚轮切换 | X/R拆除 | R重生
+</div>
+<div class="sub" style="font-size:11px;color:#888">
+<b style="color:#ffd93d">平板操作：</b><br>
+左摇杆移动 | 拖动屏幕转动视角<br>
+点击底部⬜围墙/🏹箭塔切换 | 🔨建造 ❌拆除
+</div>
+<input id="name" placeholder="昵称（可空）" maxlength="12">
+<input id="room" placeholder="房间号（如 1）" value="1" maxlength="8">
+<button class="bgo" id="btn-go">⚔️ 开始战斗</button>
+</div>
+<div id="ov-death" style="display:none">
+<h1>💀 你被僵尸击倒了</h1>
+<div class="sub" id="dinfo"></div>
+<button class="brs" onclick="location.reload()">重新开始</button>
+</div>
+
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script type="module">
-import * as T from 'three';
+import*as T from"three";
+const $=id=>document.getElementById(id);
+const R=(a,b)=>a+Math.random()*(b-a);
+const RI=(a,b)=>Math.floor(R(a,b+1));
+const C=(v,a,b)=>Math.max(a,Math.min(b,v));
 
-/* 全局错误兜底：任何启动失败都显示在开始界面上，不再静默 */
-addEventListener('error',e=>{try{
-  const o=document.getElementById('overlay'),btn=document.getElementById('start');
-  if(btn&&!btn.dataset.ok)btn.textContent='出错了';
-  let d=document.getElementById('errbox');
-  if(!d&&o){d=document.createElement('div');d.id='errbox';d.style.cssText='color:#f88;font-size:13px;max-width:560px;text-align:center;line-height:1.6';o.insertBefore(d,null);}
-  if(d)d.textContent='错误：'+(e.message||e.type||'未知')+'（请把此信息发给开发者）';
-}catch(_){}});
-
-/* ============================ 基础 / 地图（参照上一游戏） ============================ */
-const W=112, D=112;
-const BL={AIR:0,GRASS:1,DIRT:2,STONE:3,WATER:4,SAND:5,SNOW:6,WOOD:7,LEAF:8,WALL:9};
-const BC={1:0x6abe5a,2:0x8a6a43,3:0x9a9a9a,4:0x2a6cc0,5:0xe2d29a,6:0xeef3f6,7:0x6b4a2b,8:0x3f9d4a,9:0x9aa3ad};
-const SOLID=new Set([1,2,3,4,5,6,7,8,9]);
-const DEST=new Set([7,8,9]);
-const CORNERS=[[3,3],[W-3,3],[3,D-3],[W-3,D-3]];
-const clampX=x=>Math.max(1.5,Math.min(W-1.5,x));
-const clampZ=z=>Math.max(1.5,Math.min(D-1.5,z));
-
-function hash2(x,y){let h=x*374761393+y*668265263;h=(h^(h>>13))*1274126177;return ((h^(h>>16))>>>0)/4294967295;}
-function noise2(x,y){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi;
-  const tl=hash2(xi,yi),tr=hash2(xi+1,yi),bl=hash2(xi,yi+1),br=hash2(xi+1,yi+1);
-  const u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf);
-  return tl*(1-u)*(1-v)+tr*u*(1-v)+bl*(1-u)*v+br*u*v;}
-function fbm2(x,y){let f=0,a=0.5;for(let i=0;i<4;i++){f+=a*noise2(x,y);x*=2;y*=2;a*=0.5;}return f;}
-function getH(x,z){const m=fbm2(x*0.027,z*0.027);
-  let h=Math.floor(5+m*15);
-  const r=Math.hypot(x-W/2,z-D/2);
-  if(r>46) h=Math.max(h,Math.floor(12+(r-46)*0.7));
-  return Math.max(2,Math.min(26,h));}
-
-let _seed=1337;
-function rnd(){_seed=(_seed*1664525+1013904223)>>>0;return _seed/4294967296;}
-const key=(x,y,z)=>x+","+y+","+z;
-const blocks=new Map();
-const builtBlocks=new Map();
+// ============================ 基础/地图 ============================
+const W=112,D=112;
+const BL={AIR:0,GRASS:1,DIRT:2,STONE:3,WATER:4,SAND:5,SNOW:6,WOOD:7,LEAF:8};
+const BC={1:0x6abe5a,2:0x8a6a43,3:0x8a8a8a,4:0x2a6cc0,5:0xe2d29a,6:0xeef3f6,7:0x6b4a2b,8:0x3f9d4a};
 const BW={WALL:10,TOWER:11,TOWER_TOP:12};
 const BWC={10:0x999999,11:0x8B4513,12:0xCD853F};
-let broken=[];
+const SOLID=new Set([BL.GRASS,BL.DIRT,BL.STONE,BL.SAND,BL.SNOW,BL.WOOD,BL.LEAF,BW.WALL,BW.TOWER,BW.TOWER_TOP]);
+const DEST=new Set([BW.WALL,BW.TOWER,BW.TOWER_TOP]);
+
+function hash2(x,z){let n=Math.sin(x*127.1+z*311.7)*43758.5453;return n-Math.floor(n)}
+function noise2(x,z){
+  const xi=Math.floor(x),zi=Math.floor(z),xf=x-xi,zf=z-zi;
+  const a=hash2(xi,zi),b=hash2(xi+1,zi),c=hash2(xi,zi+1),d=hash2(xi+1,zi+1);
+  const ux=xf*xf*(3-2*xf),uz=zf*zf*(3-2*zf);
+  return a+(b-a)*ux+(c-a)*uz+(a-b-c+d)*ux*uz}
+function fbm2(x,z,oct){let v=0,a=1,f=1;for(let i=0;i<oct;i++){v+=a*noise2(x*f,z*f);a*=.5;f*=2}return v}
+
+let blocks=new Map(),builtBlocks=new Map();
+function getH(x,z){
+  const dist=Math.sqrt((x-56)**2+(z-56)**2);
+  let h=Math.floor(6+fbm2(x*0.04,z*0.04,4)*5);
+  if(dist>46)h+=Math.floor((dist-46)*0.6);
+  return Math.min(h,26)}
+function key(x,y,z){return x+","+y+","+z}
+function blockAt(x,y,z){return blocks.get(key(x,y,z))||0}
+function solidAt(x,y,z){return SOLID.has(blockAt(x,y,z))||builtBlocks.has(key(x,y,z))}
 
 function genWorld(){
-  blocks.clear(); broken=[]; _seed=1337;
+  blocks.clear();
   for(let x=0;x<W;x++)for(let z=0;z<D;z++){
-    const h=getH(x,z), bh=Math.max(2,Math.floor((fbm2(x*0.04+10,z*0.04+10))*4));
-    for(let y=Math.max(0,h-3);y<=h;y++){
-      let t=BL.DIRT;
-      if(y===h){const r=Math.hypot(x-W/2,z-D/2);t=(h<4)?BL.SAND:(h>18?BL.SNOW:BL.GRASS);if(r>50)t=BL.STONE;}
-      blocks.set(key(x,y,z),t);
-    }
-    if(h<4)for(let y=h+1;y<=h+5;y++)blocks.set(key(x,y,z),BL.WATER);
+    const h=getH(x,z);
+    const biome=fbm2(x*0.02+50,z*0.02+50,3);
+    let top=BL.GRASS;
+    if(h<=5)top=BL.SAND;
+    else if(h>=12)top=BL.SNOW;
+    else if(biome<0.32)top=BL.DIRT;
+    else if(biome>0.78)top=BL.SAND;
+    for(let y=0;y<=h;y++){
+      let t=BL.STONE;
+      if(y===h)t=top;else if(y>=h-2)t=BL.DIRT;
+      blocks.set(key(x,y,z),t)}
+    if(h<=5)for(let y=h+1;y<=6;y++)if(!blocks.get(key(x,y,z)))blocks.set(key(x,y,z),BL.WATER);
   }
-  // 出生点区域铲平
-  const cx=Math.floor(W/2), cz=Math.floor(D/2);
-  for(let x=cx-3;x<=cx+3;x++)for(let z=cz-3;z<=cz+3;z++){const h=getH(x,z);for(let y=h;y>=h-1;y--)blocks.set(key(x,y,z),BL.GRASS);}
-  // 树
-  for(let i=0;i<120;i++){const x=4+Math.floor(rnd()*(W-8)),z=4+Math.floor(rnd()*(D-8));const h=getH(x,z);if(h<5||h>16){i--;continue;}blocks.set(key(x,h+1,z),BL.WOOD);blocks.set(key(x,h+2,z),BL.WOOD);blocks.set(key(x,h+3,z),BL.WOOD);for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++)for(let dy=0;dy<=1;dy++){if(Math.abs(dx)+Math.abs(dz)+dy>3)continue;blocks.set(key(x+dx,h+3+dy,z+dz),BL.LEAF);}if(rnd()<0.15){x;z;for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)blocks.set(key(x+dx,h+5,z+dz),BL.LEAF);}}
-  // 石墙遗迹
-  for(let i=0;i<14;i++){const x=8+Math.floor(rnd()*(W-16)),z=8+Math.floor(rnd()*(D-16));if(Math.hypot(x-cx,z-cz)<6)continue;const hh=2+Math.floor(rnd()*3);for(let y=getH(x,z)+1;y<=getH(x,z)+hh;y++)blocks.set(key(x,y,z),BL.WALL);}
-  // 四周石墙（可见边界，不可破坏）
-  for(let x=0;x<W;x++){for(let y=getH(x,0)+1;y<=getH(x,0)+3;y++)blocks.set(key(x,y,0),BL.STONE);for(let y=getH(x,D-1)+1;y<=getH(x,D-1)+3;y++)blocks.set(key(x,y,D-1),BL.STONE);}
-  for(let z=0;z<D;z++){for(let y=getH(0,z)+1;y<=getH(0,z)+3;y++)blocks.set(key(0,y,z),BL.STONE);for(let y=getH(W-1,z)+1;y<=getH(W-1,z)+3;y++)blocks.set(key(W-1,y,z),BL.STONE);}
+  // 平坦出生点
+  for(let x=53;x<=59;x++)for(let z=53;z<=59;z++){
+    const h=getH(x,z);
+    for(let y=1;y<=h;y++)blocks.set(key(x,y,z),y===h?BL.GRASS:BL.DIRT)}
+  // 周围围墙
+  for(let x=0;x<W;x++){blocks.set(key(x,0,0),BL.STONE);blocks.set(key(x,0,D-1),BL.STONE)}
+  for(let z=0;z<D;z++){blocks.set(key(0,0,z),BL.STONE);blocks.set(key(W-1,0,z),BL.STONE)}
 }
 
+// ============================ three 基础 ============================
+const cv=$("c");
+const ren=new T.WebGLRenderer({canvas:cv,antialias:false,powerPreference:"high-performance"});
+ren.setPixelRatio(Math.min(devicePixelRatio,1.5));
+ren.setSize(innerWidth,innerHeight);
+const sc=new T.Scene();
+sc.background=new T.Color(0x87ceeb);
+sc.fog=new T.Fog(0x87ceeb,70,220);
+const cam=new T.PerspectiveCamera(75,innerWidth/innerHeight,0.1,400);
+const hemi=new T.HemisphereLight(0xbfe3ff,0x6b5a3a,0.8);sc.add(hemi);
+const dl=new T.DirectionalLight(0xffffff,1.0);dl.position.set(60,120,30);sc.add(dl);
+const rc=new T.Raycaster();
 const GEO=new T.BoxGeometry(1,1,1);
 const MATS={};
 Object.keys(BC).forEach(k=>{MATS[k]=new T.MeshLambertMaterial({color:0xffffff})});
 Object.keys(BWC).forEach(k=>{MATS[k]=new T.MeshLambertMaterial({color:BWC[k]})});
-let solidMeshes=[],tm={},bm={};
-let _rebuildT=0;
+
+let tm={},bm={};
 function rebuildTerrain(){
-  Object.values(tm).forEach(m=>{if(m)sc.remove(m)});tm={};solidMeshes=[];
+  Object.values(tm).forEach(m=>{if(m)sc.remove(m)});tm={};
   const g3={};
   blocks.forEach((t,k)=>{if(!t)return;if(!g3[t])g3[t]=[];const[x,y,z]=k.split(",").map(Number);g3[t].push(x,y,z)});
-  const m4=new T.Matrix4();const tmpC=new T.Color();
+  const m4=new T.Matrix4(),tmpC=new T.Color();
   Object.entries(g3).forEach(([t,a])=>{
     const n=a.length/3;if(!n)return;
-    const m=new T.InstancedMesh(GEO,MATS[t]||MATS[1],n);m.frustumCulled=false;
+    const mt=MATS[t]||MATS[1];
+    const m=new T.InstancedMesh(GEO,mt,n);
     const base=new T.Color(BC[t]||BC[1]);
     for(let i=0;i<n;i++){
-      m4.makeTranslation(a[i*3]+.5,a[i*3+1]+.5,a[i*3+2]+.5);m.setMatrixAt(i,m4);
       const bx=a[i*3],bz=a[i*3+2];
-      const hj=hash2(bx*1.3+7,bz*1.7+3);
-      const v=(hj-0.5)*0.16;
+      m4.makeTranslation(bx+.5,a[i*3+1]+.5,bz+.5);m.setMatrixAt(i,m4);
+      const hj=hash2(bx*1.3+7,bz*1.7+3),v=(hj-0.5)*0.16;
       tmpC.copy(base).offsetHSL((hj-0.5)*0.03,v*0.6,v);
-      m.setColorAt(i,tmpC);}
+      m.setColorAt(i,tmpC)}
     m.instanceMatrix.needsUpdate=true;
     if(m.instanceColor)m.instanceColor.needsUpdate=true;
-    sc.add(m);solidMeshes.push(m);tm[t]=m});
+    sc.add(m);tm[t]=m});
 }
 function rebuildBuilt(){
   Object.values(bm).forEach(m=>{if(m)sc.remove(m)});bm={};
@@ -194,755 +206,549 @@ function rebuildBuilt(){
   const m4=new T.Matrix4();
   Object.entries(g).forEach(([t,a])=>{
     const n=a.length/3;if(!n)return;
-    const m=new T.InstancedMesh(GEO,MATS[t]||MATS[10],n);m.frustumCulled=false;
+    const mt=MATS[t]||MATS[10];
+    const m=new T.InstancedMesh(GEO,mt,n);
     for(let i=0;i<n;i++){m4.makeTranslation(a[i*3]+.5,a[i*3+1]+.5,a[i*3+2]+.5);m.setMatrixAt(i,m4)}
     m.instanceMatrix.needsUpdate=true;sc.add(m);bm[t]=m});
 }
-function allBuildMeshes(){return[...Object.values(tm),...Object.values(bm)].filter(m=>!!m);}
-function solidAt(x,y,z){return SOLID.has(blockAt(x,y,z))||builtBlocks.has(key(x,y,z));}
-function blockAt(x,y,z){return blocks.get(key(x,y,z))||0;}
-function breakBlock(x,y,z){const k=key(x,y,z),t=blocks.get(k);if(!t||!DEST.has(t))return false;blocks.delete(k);broken.push([x,y,z,t]);_rebuildT=performance.now()+60;return true;}
+function allBuildMeshes(){return[...Object.values(tm),...Object.values(bm)].filter(m=>!!m)}
 
-/* ============================ three 基础 ============================ */
-const cv=document.getElementById('c');
-const renderer=new T.WebGLRenderer({canvas:cv,antialias:false,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
-renderer.setSize(innerWidth,innerHeight);
-const sc=new T.Scene();
-sc.background=new T.Color(0x87ceeb);
-sc.fog=new T.Fog(0x87ceeb,70,220);
-const cam=new T.PerspectiveCamera(78,innerWidth/innerHeight,0.05,500);
-const sun=new T.DirectionalLight(0xffffff,1.1); sun.position.set(60,120,30); sc.add(sun);
-sc.add(new T.HemisphereLight(0xbfe3ff,0x6b5a3a,0.8));
-const rc=new T.Raycaster();
-const atlasTex=null;
+// ============================ 玩家 ============================
+let myId=Math.random().toString(36).slice(2,10);
+let myName="",room="1";
+let P={pos:new T.Vector3(56,getH(56,56)+3,56),vel:new T.Vector3(),yaw:0,pitch:0,og:false,dead:false,hp:100,stone:15,iron:3,kills:0,score:0,hcd:0,respawn:0};
+let slot=0,hbar=[10,11];
+let keys={},jF=0,jB=0,jL=0,jR=0,jJ=0;
+const PW=.3,PH=1.7,EY=1.5;
 
-/* ============================ 玩家物理 ============================ */
-function aabb(a){return{minx:a.pos.x-0.3,maxx:a.pos.x+0.3,miny:a.pos.y,maxy:a.pos.y+1.8,minz:a.pos.z-0.3,maxz:a.pos.z+0.3};}
-function collideX(a,dx){const b=aabb(a);b.minx+=dx;b.maxx+=dx;for(let x=Math.floor(b.minx);x<=Math.floor(b.maxx);x++)for(let y=Math.floor(b.miny);y<=Math.floor(b.maxy);y++)for(let z=Math.floor(b.minz);z<=Math.floor(b.maxz);z++)if(solidAt(x,y,z))return dx>0?x-b.maxx-1e-4:(x+1)-b.minx+1e-4;return dx;}
-function collideZ(a,dz){const b=aabb(a);b.minz+=dz;b.maxz+=dz;for(let x=Math.floor(b.minx);x<=Math.floor(b.maxx);x++)for(let y=Math.floor(b.miny);y<=Math.floor(b.maxy);y++)for(let z=Math.floor(b.minz);z<=Math.floor(b.maxz);z++)if(solidAt(x,y,z))return dz>0?z-b.maxz-1e-4:(z+1)-b.minz+1e-4;return dz;}
-function collideY(a,dy){const b=aabb(a);b.miny+=dy;b.maxy+=dy;for(let x=Math.floor(b.minx);x<=Math.floor(b.maxx);x++)for(let y=Math.floor(b.miny);y<=Math.floor(b.maxy);y++)for(let z=Math.floor(b.minz);z<=Math.floor(b.maxz);z++)if(solidAt(x,y,z))return dy>0?y-b.maxy-1e-4:(y+1)-b.miny+1e-4;return dy;}
-function tryMove(a,dx,dz){dx=collideX(a,dx);dz=collideZ(a,dz);
-  if(a.pos.x<1.5)a.pos.x=1.5;if(a.pos.x>W-1.5)a.pos.x=W-1.5;if(a.pos.z<1.5)a.pos.z=1.5;if(a.pos.z>D-1.5)a.pos.z=D-1.5;
-  a.pos.x+=dx;a.pos.z+=dz;}
-function updatePhysics(dt,a){const sp=a===me?speed:0;let vy=sp*input.y, vz=sp*input.x;
-  if(a===me&&input.jump&&a.onGround){a.vel.y=8.2;a.onGround=false;input.jump=false;}
-  a.vel.y-=24*dt;
-  if(Math.abs(vy)+Math.abs(vz)>0.001){const yaw=(a===me?yaw:a.yaw)+Math.PI/2;const sx=Math.sin(yaw),sz=Math.cos(yaw);tryMove(a,vy*sx+vz*-sz,vy*sz+vz*sx);}
-  let dy=a.vel.y*dt;dy=collideY(a,dy);if(dy!==a.vel.y*dt){if(a.vel.y<0)a.onGround=true;a.vel.y=0;}a.pos.y+=dy;
-  if(a.pos.y<0){a.pos.y=0;a.vel.y=0;a.onGround=true;}
-  const g=getH(Math.round(a.pos.x),Math.round(a.pos.z))+0.05;if(a.pos.y<g){a.pos.y=g;a.vel.y=0;a.onGround=true;}}
-function jump(a){if(a.onGround){a.vel.y=8.2;a.onGround=false;}}
+function collides(px,py,pz){
+  const x0=Math.floor(px-PW),x1=Math.floor(px+PW);
+  const y0=Math.floor(py),y1=Math.floor(py+PH);
+  const z0=Math.floor(pz-PW),z1=Math.floor(pz+PW);
+  for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)for(let z=z0;z<=z1;z++){
+    if(solidAt(x,y,z))return true}return false}
+function moveA(a,d){const p=P.pos.clone();p[a]+=d;if(!collides(p.x,p.y,p.z)){P.pos[a]+=d;return false}return true}
 
-/* ============================ 角色模型（玩家） ============================ */
-function newActor(id,name,team,local){
-  const g=new T.Group();
-  const body=new T.Mesh(new T.BoxGeometry(0.5,0.9,0.3),new T.MeshLambertMaterial({color:0x3a7bd5}));body.position.y=0.95;g.add(body);
-  const head=new T.Mesh(new T.BoxGeometry(0.4,0.4,0.4),new T.MeshLambertMaterial({color:0xf0c39b}));head.position.y=1.55;g.add(head);
-  const legL=new T.Mesh(new T.BoxGeometry(0.18,0.6,0.18),new T.MeshLambertMaterial({color:0x2a4a7a}));legL.position.set(-0.13,0.3,0);g.add(legL);
-  const legR=legL.clone();legR.position.x=0.13;g.add(legR);
-  const armL=new T.Mesh(new T.BoxGeometry(0.15,0.6,0.15),new T.MeshLambertMaterial({color:0x3a7bd5}));armL.position.set(-0.33,1.0,0);g.add(armL);
-  const armR=armL.clone();armR.position.x=0.33;g.add(armR);
-  const gun=new T.Mesh(new T.BoxGeometry(0.1,0.1,0.5),new T.MeshLambertMaterial({color:0x222222}));gun.position.set(0.33,1.0,-0.35);g.add(gun);
-  const hpBg=new T.Mesh(new T.PlaneGeometry(0.9,0.12),new T.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.5}));hpBg.position.y=2.05;g.add(hpBg);
-  const hpFg=new T.Mesh(new T.PlaneGeometry(0.86,0.08),new T.MeshBasicMaterial({color:0x3ad13a}));hpFg.position.set(0,2.05,0.001);g.add(hpFg);
-  const lbl=new T.Sprite(new T.SpriteMaterial({map:makeLabel(name),depthTest:false}));lbl.scale.set(1.1,0.28,1);lbl.position.y=2.3;g.add(lbl);
-  g.legL=legL;g.legR=legR;g.armL=armL;g.armR=armR;g.body=body;g.gun=gun;g.hpBg=hpBg;g.hpFg=hpFg;g.lbl=lbl;g.name=name;
-  sc.add(g);
-  return {id,mesh:g,pos:new T.Vector3(),vel:new T.Vector3(),onGround:false,yaw:0,pitch:0,hp:100,alive:true,team,legL,legR,armL,armR,targetPos:null,_hit:0,_ph:0,_prev:null,_pt:0,hpFg,hpBg,lbl,kills:0,materials:0};
-}
-function makeLabel(text){const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');x.fillStyle='rgba(0,0,0,0)';x.fillRect(0,0,256,64);x.font='bold 34px sans-serif';x.textAlign='center';x.textBaseline='middle';x.lineWidth=6;x.strokeStyle='rgba(0,0,0,0.9)';x.strokeText(text,128,34);x.fillStyle='#fff';x.fillText(text,128,34);const t=new T.CanvasTexture(c);return t;}
-function labelActor(a){if(a.lbl)a.lbl.material.map=makeLabel(a.name);}
-function updateActorHp(a){if(!a||!a.hpFg)return;const r=Math.max(0,a.hp)/100;a.hpFg.scale.x=r;a.hpFg.position.x=-0.43*(1-r);a.hpFg.material.color.setHex(r>0.5?0x3ad13a:r>0.25?0xe3c73a:0xd13a3a);}
+function updatePlayer(dt){
+  const sp=5;
+  const fw=new T.Vector3(-Math.sin(P.yaw),0,-Math.cos(P.yaw));
+  const rt=new T.Vector3(Math.cos(P.yaw),0,-Math.sin(P.yaw));
+  let mx=0,mz=0;
+  if(keys.KeyW||jF)mz-=1;if(keys.KeyS||jB)mz+=1;
+  if(keys.KeyA||jL)mx-=1;if(keys.KeyD||jR)mx+=1;
+  if(mx||mz){const l=Math.sqrt(mx*mx+mz*mz);mx/=l;mz/=l;
+    const mv=fw.clone().multiplyScalar(-mz).add(rt.clone().multiplyScalar(mx)).normalize().multiplyScalar(sp*dt);
+    moveA("x",mv.x);moveA("z",mv.z)}
+  if((keys.Space||jJ)&&P.og)P.vel.y=8;
+  P.vel.y-=22*dt;P.og=false;
+  if(moveA("y",P.vel.y*dt)){if(P.vel.y<0)P.og=true;P.vel.y=0}
+  P.pos.x=C(P.pos.x,1,W-2);P.pos.z=C(P.pos.z,1,D-2);
+  if(P.pos.y<-5){P.pos.y=15;P.vel.set(0,0,0)}
+  P.hcd=Math.max(0,P.hcd-dt)}
 
-/* ============================ 僵尸 ============================ */
-function newZombieMesh(type){
-  const g=new T.Group();
-  const col=type===3?0x551111:type===1?0x6b3a2b:type===2?0x9a9a5a:0x4a7c3a;
-  const s=type===3?1.5:type===1?1.25:type===2?0.9:1;
-  const body=new T.Mesh(new T.BoxGeometry(0.5*s,0.9*s,0.3*s),new T.MeshLambertMaterial({color:col}));body.position.y=0.7*s;g.add(body);
-  const head=new T.Mesh(new T.BoxGeometry(0.4*s,0.4*s,0.4*s),new T.MeshLambertMaterial({color:type===1?0x8a5a3b:type===3?0x772222:0x6a9a5a}));head.position.y=1.35*s;g.add(head);
-  if(type===3){
-    const e1=new T.Mesh(new T.BoxGeometry(.08,.08,.08),new T.MeshBasicMaterial({color:0xff0000}));e1.position.set(-.09,1.4,.21);g.add(e1);
-    const e2=e1.clone();e2.position.x=.09;g.add(e2);
-  }
-  const armL=new T.Mesh(new T.BoxGeometry(0.14*s,0.55*s,0.14*s),new T.MeshLambertMaterial({color:col}));armL.position.set(-0.33*s,1.0*s,-0.18*s);armL.rotation.x=-1.3;g.add(armL);
-  const armR=armL.clone();armR.position.x=0.33*s;g.add(armR);
-  const hpBg=new T.Mesh(new T.PlaneGeometry(0.9*s,0.1),new T.MeshBasicMaterial({color:0x333333,side:T.DoubleSide}));
-  const hpFg=new T.Mesh(new T.PlaneGeometry(0.86*s,0.07),new T.MeshBasicMaterial({color:0xff0000,side:T.DoubleSide}));
-  const hbG=new T.Group();hpFg.position.z=0.001;hbG.add(hpBg,hpFg);hbG.position.y=1.95*s;g.add(hbG);
-  sc.add(g);
-  return {mesh:g,hpFg,hpBg,hbG,s};
-}
-const zombies=new Map(); // id -> {id,pos,vel,mesh,hp,maxhp,type,s,speed,dmg,atkCd,_hit,alive,targetPos}
-function makeZombie(id,type){
-  const m=newZombieMesh(type);
-  return {id,pos:new T.Vector3(),vel:new T.Vector3(),mesh:m.mesh,hpFg:m.hpFg,hpBg:m.hpBg,hbG:m.hbG,s:m.s,hp:1,maxhp:1,type,speed:2,dmg:6,atkCd:0,_hit:0,alive:true,targetPos:null,yaw:0};
-}
-function killZombie(zid,killer){
-  const zb=zombies.get(zid);if(!zb)return;
-  const p=zb.pos.clone();
-  zombies.delete(zid); sc.remove(zb.mesh);
-  let loot; // ["s",n]=石头 ["i",n]=铁块
-  if(zb.type===3){loot=[["s",3],["i",2]];if(killer===myId)toast("💀 BOSS击杀！⬜+3 🟠+2")}
-  else if(Math.random()<0.3){loot=[["i",1]]}
-  else{loot=[["s",2]]}
-  loot.forEach(([k,n])=>{for(let i=0;i<n;i++)spawnDrop(p.x,p.y,p.z,k==="s"?"stone":"iron")});
-  if(killer===myId){me.kills++;me.score+=(zb.type===3?20:5);spawnResAnim(p.x,p.y+1.2,p.z,loot[0][0]==="s"?"stone":"iron",1);}
-  if(netOk)netSend({t:"zd",zid,x:+p.x.toFixed(2),y:+p.y.toFixed(2),z:+p.z.toFixed(2),killer,loot:loot.map(l=>l[0]+l[1]).join(",")},1);
-}
-function applyZHit(zid,dmg,killer){
-  const zb=zombies.get(zid);if(!zb||!zb.alive)return;
-  zb.hp-=dmg; zb._hit=performance.now();
-  if(zb.hp<=0){zb.alive=false;killZombie(zid,killer);}
-}
-
-/* ============================ 掉落物（石头材料） ============================ */
-const pickups=[];
-function spawnDrop(x,y,z,kind){
-  const iron=kind==="iron";
-  const m=new T.Mesh(new T.BoxGeometry(0.32,0.32,0.32),new T.MeshLambertMaterial({color:iron?0xffa500:BC[BL.STONE]}));
-  m.position.set(x,y+0.45,z);sc.add(m);
-  pickups.push({mesh:m,spin:Math.random()*6,kind:iron?"iron":"stone"});
-}
-
-/* ============================ 武器 / 射击 ============================ */
-const gunGroup=new T.Group(); sc.add(gunGroup);
-let recoil=0, muzzleT=0, shakeAmt=0;
-function initGun(){
-  const b=new T.Mesh(new T.BoxGeometry(0.06,0.07,0.45),new T.MeshLambertMaterial({color:0x2a2a2a}));b.position.set(0,-0.05,-0.25);gunGroup.add(b);
-  const g=new T.Mesh(new T.BoxGeometry(0.05,0.12,0.1),new T.MeshLambertMaterial({color:0x444}));g.position.set(0,0.02,-0.05);gunGroup.add(g);
-}
-const _tc=new T.CylinderGeometry(0.045,0.045,1,6); _tc.rotateX(Math.PI/2);
-function addTracer(from,to){const len=from.distanceTo(to);const m=new T.Mesh(_tc,new T.MeshBasicMaterial({color:0xfff2a0,transparent:true,opacity:0.9,blending:T.AdditiveBlending,depthWrite:false}));m.scale.set(1,1,len);m.position.copy(from.clone().add(to).multiplyScalar(0.5));m.lookAt(to);m.rotateY(Math.PI/2);sc.add(m);return m;}
-function spawnMuzzle(pos,dir){const m=new T.Mesh(new T.BoxGeometry(0.3,0.3,0.3),new T.MeshBasicMaterial({color:0xffd66b,transparent:true,opacity:0.95,blending:T.AdditiveBlending,depthWrite:false}));m.position.copy(pos);sc.add(m);particles.spawn(m.position.clone(),new T.Vector3(0,0,0),0xffd66b,8,0.18);return m;}
-function rayBox(o,d,min,max){const ix=1/(d.x||1e-9),iy=1/(d.y||1e-9),iz=1/(d.z||1e-9);const tx1=(min.x-o.x)*ix,tx2=(max.x-o.x)*ix;const tmin=Math.max(Math.min(tx1,tx2),Math.min((min.y-o.y)*iy,(max.y-o.y)*iy),Math.min((min.z-o.z)*iz,(max.z-o.z)*iz));const tmax=Math.min(Math.max(tx1,tx2),Math.max((min.y-o.y)*iy,(max.y-o.y)*iy),Math.max((min.z-o.z)*iz,(max.z-o.z)*iz));return tmax>=0&&tmax>=tmin?tmin:-1;}
-
-function fire(){
-  const now=performance.now();
-  if(me.cd>now)return; me.cd=now+180;
-  recoil=1; muzzleT=now+60; shakeAmt=0.12;
-  const origin=cam.position.clone(); const dir=cam.getWorldDirection(new T.Vector3()).clone();
-  // 僵尸优先
-  let tZ=Infinity,zh=null;
-  zombies.forEach(zb=>{if(!zb.alive)return;const min=new T.Vector3(zb.pos.x-0.3*zb.s,zb.pos.y,zb.pos.z-0.3*zb.s);const max=new T.Vector3(zb.pos.x+0.3*zb.s,zb.pos.y+1.8*zb.s,zb.pos.z+0.3*zb.s);const t=rayBox(origin,dir,min,max);if(t>0&&t<tZ){tZ=t;zh=zb;}});
-  let hp=null;
-  if(tZ<9){
-    hp=origin.clone().add(dir.clone().multiplyScalar(tZ));
-    const m=addTracer(gunWorld(),hp);setTimeout(()=>sc.remove(m),90);
-    particles.spawn(hp.clone(),new T.Vector3(0,0,0),0x6fbf4a,8,0.25);
-    applyZombieDamage(zh.id,25);
-    spawnDmgNum(hp.x,hp.y+0.6,hp.z,25);
-    zh._hit=now; playHit(); shakeAmt=0.18;
-  } else {
-    const hits=rc.intersectObjects(solidMeshes,false);
-    let end=origin.clone().add(dir.clone().multiplyScalar(9));
-    if(hits.length&&hits[0].distance<9)end=hits[0].point.clone();
-    const m=addTracer(gunWorld(),end);setTimeout(()=>sc.remove(m),90);
-  }
-  const mp=gunWorld(); const md=dir.clone(); spawnMuzzle(mp,md);
-  playShoot();
-  if(netOk)netSend({t:"sh",ox:+origin.x.toFixed(2),oy:+origin.y.toFixed(2),oz:+origin.z.toFixed(2),dx:+dir.x.toFixed(3),dy:+dir.y.toFixed(3),dz:+dir.z.toFixed(3)},0);
-}
-function gunWorld(){const p=new T.Vector3();gunGroup.getWorldPosition(p);return p;}
-
-/* ============================ 建造系统（参照方块世界塔防） ============================ */
-let slot=0,hbar=[10,11]; // 10=围墙(石头) 11=箭塔(铁x2)
-let towers=[],bullets=[],dmgNums=[],resAnims=[];
+// ============================ 准星/建造预览 ============================
 function getTarget(nx,ny){
-  rc.set(cam.position,cam.getWorldDirection(new T.Vector3()));
-  rc.far=8;
+  const vx=(nx!==undefined)?nx:0, vy=(ny!==undefined)?ny:0;
+  rc.setFromCamera(new T.Vector2(vx,vy),cam);
   const hits=rc.intersectObjects(allBuildMeshes(),false);
   if(!hits.length)return null;
   const p=hits[0].point,n=hits[0].face.normal;
   return{
     x:Math.floor(p.x-n.x*.5),y:Math.floor(p.y-n.y*.5),z:Math.floor(p.z-n.z*.5),
-    nx:Math.floor(p.x+n.x*.5),ny:Math.floor(p.y+n.y*.5),nz:Math.floor(p.z+n.z*.5)};
-}
+    nx:Math.floor(p.x+n.x*.5),ny:Math.floor(p.y+n.y*.5),nz:Math.floor(p.z+n.z*.5)}}
+
 let hlMesh=null,rangeIndicator=null,previewMesh=null;
 function createHL(){
   const g=new T.BoxGeometry(1.03,1.03,1.03);
-  hlMesh=new T.LineSegments(new T.EdgesGeometry(g),new T.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.6}));
+  hlMesh=new T.LineSegments(new T.EdgesGeometry(g),new T.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.6}));
   hlMesh.visible=false;sc.add(hlMesh);
-  rangeIndicator=new T.Mesh(new T.RingGeometry(13.5,14.5,64),new T.MeshBasicMaterial({color:0x00ff00,transparent:true,opacity:.2,side:T.DoubleSide}));
+  rangeIndicator=new T.Mesh(new T.RingGeometry(13.5,14.5,64),new T.MeshBasicMaterial({color:0x00ff00,transparent:true,opacity:0.2,side:T.DoubleSide}));
   rangeIndicator.rotation.x=-Math.PI/2;rangeIndicator.visible=false;sc.add(rangeIndicator);
-  previewMesh=new T.Mesh(new T.BoxGeometry(1,1,1),new T.MeshBasicMaterial({color:0x00ff00,transparent:true,opacity:.4}));
-  previewMesh.visible=false;sc.add(previewMesh);
-}
+  previewMesh=new T.Mesh(new T.BoxGeometry(1,1,1),new T.MeshBasicMaterial({color:0x00ff00,transparent:true,opacity:0.4}));
+  previewMesh.visible=false;sc.add(previewMesh)}
+
+// ============================ 建造/拆除 ============================
 function doBuild(t){
-  if(!me||!me.alive)return;
   if(!t)t=getTarget();if(!t)return;
-  if(builtBlocks.get(key(t.nx,t.ny,t.nz))||blockAt(t.nx,t.ny,t.nz))return;
-  if(t.ny>getH(t.nx,t.nz)+8){toast("建得太高了");return}
-  const it=hbar[slot];
-  if(it===10){
-    if(me.stone<=0){toast("石头不足！杀僵尸获取 ⬜");return}
-    me.stone--;
-    builtBlocks.set(key(t.nx,t.ny,t.nz),BW.WALL);
-    if(netOk)netSend({t:"blk",x:t.nx,y:t.ny,z:t.nz,typ:BW.WALL},1);
-    rebuildBuilt();toast("🧱 建造围墙");
-  }else{
-    if(me.iron<2){toast("铁块不足(需2)！僵尸有几率掉落 🟠");return}
-    me.iron-=2;
+  if(hbar[slot]===10){
+    if(P.stone<=0){showToast("石头不足！");return}
+    if(builtBlocks.has(key(t.nx,t.ny,t.nz))||solidAt(t.nx,t.ny,t.nz))return;
+    P.stone--;builtBlocks.set(key(t.nx,t.ny,t.nz),BW.WALL);
+    rebuildBuilt();showToast("🧱 建造围墙");
+    if(netOk)netSend({t:"bw",x:t.nx,y:t.ny,z:t.nz},1);
+  }else if(hbar[slot]===11){
+    if(P.iron<=0){showToast("铁块不足！");return}
+    if(builtBlocks.has(key(t.nx,t.ny,t.nz))||solidAt(t.nx,t.ny,t.nz))return;
+    P.iron--;
     const bx=t.nx,by=t.ny,bz=t.nz;
-    for(let dy=0;dy<3;dy++)builtBlocks.set(key(bx,by+dy,bz),BW.TOWER);
+    builtBlocks.set(key(bx,by,bz),BW.TOWER);
+    builtBlocks.set(key(bx,by+1,bz),BW.TOWER);
+    builtBlocks.set(key(bx,by+2,bz),BW.TOWER);
     builtBlocks.set(key(bx,by+3,bz),BW.TOWER_TOP);
-    towers.push({x:bx+.5,y:by+4,z:bz+.5,hp:15,atk:4,range:14,cd:0,key:key(bx,by,bz),owner:myId});
-    if(netOk)netSend({t:"tw",x:bx,y:by,z:bz,owner:myId},1);
-    rebuildBuilt();toast("🏹 建造箭塔！");
-  }
-}
-function removeTowerCells(bx,by,bz){
-  for(let dy=0;dy<4;dy++)builtBlocks.delete(key(bx,by+dy,bz));
-  towers=towers.filter(tw=>tw.key!==key(bx,by,bz));
-}
+    towers.push({x:bx+.5,y:by+4,z:bz+.5,hp:15,atk:4,range:14,cd:0,key:key(bx,by,bz)});
+    rebuildBuilt();showToast("🏹 建造箭塔！");
+    if(netOk)netSend({t:"tw",x:bx,y:by,z:bz},1);
+  }}
 function doDemolish(t){
-  if(!me||!me.alive)return;
   if(!t)t=getTarget();if(!t)return;
   const k=key(t.x,t.y,t.z);
   const bt=builtBlocks.get(k);
-  if(!bt){toast("准星没有对准可拆除的方块");return}
+  if(!bt){showToast("准星没有对准可拆除的方块");return}
   if(bt===BW.WALL){
-    builtBlocks.delete(k);me.stone++;
+    builtBlocks.delete(k);P.stone++;
     if(netOk)netSend({t:"rmb",x:t.x,y:t.y,z:t.z},1);
     toast("⬜ 回收石头");
   }else{
     let bx=t.x,by=t.y,bz=t.z,found=false;
     for(let dy=0;dy<4&&!found;dy++){
       const ck=key(t.x,t.y-dy,t.z);
-      if(towers.some(tw=>tw.key===ck)){bx=t.x;by=t.y-dy;bz=t.z;found=true}
-    }
-    removeTowerCells(bx,by,bz);
-    me.iron+=2;
+      if(towers.some(tw=>tw.key===ck)){bx=t.x;by=t.y-dy;bz=t.z;found=true}}
+    for(let dy=0;dy<4;dy++)builtBlocks.delete(key(bx,by+dy,bz));
+    towers=towers.filter(tw=>tw.key!==key(bx,by,bz));
+    P.iron+=2;
     if(netOk)netSend({t:"rmt",x:bx,y:by,z:bz},1);
     toast("🟠 回收铁块");
   }
-  rebuildBuilt();
-}
+  rebuildBuilt()}
 
-/* ============================ 箭塔（参照方块世界塔防） ============================ */
+// ============================ 僵尸 ============================
+let zombies=[],wave=0,waveT=25,towers=[],bullets=[],dmgNums=[],resAnims=[];
+function createZombie(x,z,isBoss){
+  const g=new T.Group();
+  const bm2=new T.MeshLambertMaterial({color:isBoss?0x440000:0x2d6b2d});
+  const body=new T.Mesh(new T.BoxGeometry(.7,.9,.4),bm2);body.position.y=.95;
+  const hd=new T.Mesh(new T.BoxGeometry(.45,.45,.45),bm2);hd.position.y=1.65;
+  const e1=new T.Mesh(new T.BoxGeometry(.08,.08,.08),new T.MeshBasicMaterial({color:0xff0000}));e1.position.set(-.1,1.7,.24);
+  const e2=new T.Mesh(new T.BoxGeometry(.08,.08,.08),new T.MeshBasicMaterial({color:0xff0000}));e2.position.set(.1,1.7,.24);
+  const a1=new T.Mesh(new T.BoxGeometry(.18,.5,.18),bm2);a1.position.set(-.45,.9,-.15);a1.rotation.x=-.6;
+  const a2=new T.Mesh(new T.BoxGeometry(.18,.5,.18),bm2);a2.position.set(.45,.9,-.15);a2.rotation.x=-.6;
+  const l1=new T.Mesh(new T.BoxGeometry(.18,.45,.18),bm2);l1.position.set(-.15,.25,0);
+  const l2=new T.Mesh(new T.BoxGeometry(.18,.45,.18),bm2);l2.position.set(.15,.25,0);
+  g.add(body,hd,e1,e2,a1,a2,l1,l2);
+  // 血条
+  const hbG=new T.Group();hbG.position.y=2.3;
+  const hbBg=new T.Mesh(new T.PlaneGeometry(1.2,0.2),new T.MeshBasicMaterial({color:0x333333,side:T.DoubleSide}));
+  const hbFill=new T.Mesh(new T.PlaneGeometry(1,0.15),new T.MeshBasicMaterial({color:0xff0000,side:T.DoubleSide}));hbFill.position.z=0.01;
+  hbG.add(hbBg,hbFill);g.add(hbG);
+  const h=getH(Math.floor(x),Math.floor(z));
+  g.position.set(x,h+1,z);sc.add(g);
+  const zd={hp:isBoss?30:8,maxHp:isBoss?30:8,sp:isBoss?3.5:R(2,3),dead:false,walk:R(0,6.28),flash:0,atkCd:0,boss:isBoss,scale:isBoss?1.5:1,hbFill,hbG};
+  g.userData=zd;zombies.push(g);
+  if(isBoss)g.scale.setScalar(1.5);
+  return g}
+
+function spawnWave(){
+  wave++;const isBoss=wave%5===0;
+  const n=isBoss?Math.min(6+wave*2,40):Math.min(2+wave,25);
+  let sp=0;
+  for(let i=0;i<n;i++){
+    if(zombies.length>=50)break;
+    const a=R(0,Math.PI*2),d=R(22,38);
+    const x=C(P.pos.x+Math.cos(a)*d,2,W-3);
+    const z=C(P.pos.z+Math.sin(a)*d,2,D-3);
+    createZombie(x,z,isBoss);sp++}
+  if(isBoss){showBossWarn("💀 BOSS 第"+wave+"波！(×"+sp+")");showToast("BOSS波！巨型僵尸来袭！")}
+  else showToast("🧟 第"+wave+"波！(×"+sp+")")}
+
 function applyZombieDamage(zid,dmg){
-  if(isHost())applyZHit(zid,dmg,myId);
-  else if(netOk)netSend({t:"zh",zid,dmg,from:myId},1);
-}
+  // 直接按索引找（单机或主机）
+  const z=zombies[zid];if(!z||z.userData.dead)return;
+  z.userData.hp-=dmg;z.userData.flash=0.15;
+  spawnP(z.position.x,z.position.y+1,z.position.z,0xff4400);
+  spawnDmgNum(z.position.x,z.position.y+2,z.position.z,Math.round(dmg));
+  if(z.userData.hp<=0)killZ(z)}
+
+function killZ(z){
+  z.userData.dead=true;
+  const px=z.position.x,py=z.position.y+1,pz=z.position.z;
+  if(z.userData.boss){P.iron+=2;P.stone+=3;spawnResAnim(px,py,pz,"iron",2);spawnResAnim(px,py,pz,"stone",3);showToast("💀 BOSS击杀！")}
+  else{if(Math.random()<0.3){P.iron++;spawnResAnim(px,py,pz,"iron",1);showToast("🟠 获得铁块！")}
+  else{P.stone+=2;spawnResAnim(px,py,pz,"stone",2);showToast("⬜ 获得石头×2")}}
+  P.score+=z.userData.boss?20:5;P.kills++;
+  if(netOk)netSend({t:"zk",zid},0)}
+
+function updateZombies(dt){
+  for(let i=zombies.length-1;i>=0;i--){
+    const z=zombies[i],st=z.userData;
+    if(st.dead){z.scale.multiplyScalar(.9);if(z.scale.x<.05){sc.remove(z);zombies.splice(i,1)}continue}
+    if(st.flash>0){st.flash-=dt;z.children.forEach(c=>{if(c.material&&c.material.emissive)c.material.emissive.setRGB(st.flash*5,st.flash,0)})}
+    // 血条朝向
+    if(st.hbG){st.hbG.lookAt(cam.position);
+      const pct=Math.max(0,st.hp/st.maxHp);
+      st.hbFill.scale.x=pct;st.hbFill.position.x=-(1-pct)*0.5;
+      st.hbFill.material.color.setHex(pct>0.5?0x00ff00:pct>0.25?0xffff00:0xff0000)}
+    st.atkCd=Math.max(0,st.atkCd-dt);
+    const d=z.position.distanceTo(P.pos);
+    const dir=new T.Vector3();
+    if(d<35&&P.hp>0){
+      dir.copy(P.pos).sub(z.position);dir.y=0;
+      if(dir.lengthSq()>.001)dir.normalize();
+      if(d<1.6&&st.atkCd<=0){st.atkCd=1;damagePlayer(st.boss?4:2)}
+    }else{
+      if(!st.wp||z.position.distanceTo(st.wp)<1.5)
+        st.wp=new T.Vector3(z.position.x+R(-10,10),0,z.position.z+R(-10,10));
+      dir.copy(st.wp).sub(z.position);dir.y=0;
+      if(dir.lengthSq()>.001)dir.normalize()}
+    z.position.addScaledVector(dir,st.sp*dt);
+    z.position.x=C(z.position.x,1,W-2);z.position.z=C(z.position.z,1,D-2);
+    z.position.y=getH(Math.floor(z.position.x),Math.floor(z.position.z))+1;
+    if(dir.lengthSq()>.01)z.rotation.y=Math.atan2(dir.x,dir.z);
+    st.walk+=dt*8;const sw=Math.sin(st.walk)*.5;
+    z.children[4].rotation.x=-sw;z.children[5].rotation.x=sw;
+    z.children[6].rotation.x=-sw*.7;z.children[7].rotation.x=sw*.7;
+    // 僵尸攻击围墙
+    const bx=Math.floor(z.position.x),by=Math.floor(z.position.y),bz=Math.floor(z.position.z);
+    for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
+      const wk=key(bx+dx,by,bz+dz);
+      if(builtBlocks.get(wk)===BW.WALL&&Math.random()<dt*0.5){
+        builtBlocks.delete(wk);for(let j=0;j<4;j++)spawnP(bx+dx+.5,by+.5,bz+dz+.5,0x999999);rebuildBuilt()}}}}
+
+// ============================ 箭塔/子弹 ============================
 function updateTowers(dt){
   towers.forEach(tw=>{
-    if(tw.owner!==myId)return; // 塔归建造者客户端模拟，伤害统一走 zh 通道
-    tw.cd=Math.max(0,tw.cd-dt);
-    if(tw.cd>0)return;
+    tw.cd=Math.max(0,tw.cd-dt);if(tw.cd>0)return;
     let nearest=null,nd=Infinity;
-    zombies.forEach(z=>{if(!z.alive)return;
-      const d=Math.sqrt((z.pos.x-tw.x)**2+(z.pos.y+1-tw.y)**2+(z.pos.z-tw.z)**2);
+    zombies.forEach(z=>{if(z.userData.dead)return;
+      const d=Math.sqrt((z.position.x-tw.x)**2+(z.position.y+1-tw.y)**2+(z.position.z-tw.z)**2);
       if(d<tw.range&&d<nd){nd=d;nearest=z}});
     if(!nearest)return;
     tw.cd=1.0;
-    const dir=new T.Vector3(nearest.pos.x-tw.x,(nearest.pos.y+1)-tw.y,nearest.pos.z-tw.z).normalize();
-    spawnArrowVisual(tw.x,tw.y,tw.z,dir,nearest.pos);
-    if(netOk)netSend({t:"ts",ox:+tw.x.toFixed(1),oy:+tw.y.toFixed(1),oz:+tw.z.toFixed(1),tx:+nearest.pos.x.toFixed(1),ty:+(nearest.pos.y+1).toFixed(1),tz:+nearest.pos.z.toFixed(1)},0);
-  });
-}
-function spawnArrowVisual(x,y,z,dir,targetPos){
-  const arrow=new T.Group();
-  const shaft=new T.Mesh(new T.CylinderGeometry(.03,.03,1.2,4),new T.MeshLambertMaterial({color:0x8B4513}));
-  shaft.rotation.x=Math.PI/2;
-  const head=new T.Mesh(new T.ConeGeometry(.08,.3,4),new T.MeshLambertMaterial({color:0x666666}));
-  head.position.z=-.75;head.rotation.x=-Math.PI/2;
-  arrow.add(shaft,head);
-  arrow.position.set(x,y,z);
-  arrow.lookAt(targetPos.x,targetPos.y+1,targetPos.z);
-  sc.add(arrow);
-  const trail=[];
-  for(let j=0;j<5;j++){const tp=new T.Mesh(new T.SphereGeometry(.02,4,4),new T.MeshBasicMaterial({color:0xffaa00,transparent:true,opacity:.6-j*.1}));tp.visible=false;sc.add(tp);trail.push(tp)}
-  bullets.push({mesh:arrow,x:x,y:y,z:z,vx:dir.x*20,vy:dir.y*20,vz:dir.z*20,life:2,dmg:4,trail:trail,trailTimer:0});
-}
-function freeBullet(i){const b=bullets[i];
-  if(b.trail)b.trail.forEach(t=>{sc.remove(t);t.geometry.dispose();t.material.dispose();});
-  if(b.mesh){b.mesh.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();});sc.remove(b.mesh);}
-  bullets.splice(i,1);}
+    const dir=new T.Vector3(nearest.position.x-tw.x,(nearest.position.y+1)-tw.y,nearest.position.z-tw.z).normalize();
+    // 箭矢
+    const arrow=new T.Group();
+    const shaft=new T.Mesh(new T.CylinderGeometry(0.03,0.03,1.2,4),new T.MeshLambertMaterial({color:0x8B4513}));
+    shaft.rotation.x=Math.PI/2;
+    const head=new T.Mesh(new T.ConeGeometry(0.08,0.3,4),new T.MeshLambertMaterial({color:0x666666}));
+    head.position.z=-0.75;head.rotation.x=-Math.PI/2;
+    arrow.add(shaft,head);arrow.position.set(tw.x,tw.y,tw.z);
+    arrow.lookAt(nearest.position.x,nearest.position.y+1,nearest.position.z);sc.add(arrow);
+    bullets.push({mesh:arrow,x:tw.x,y:tw.y,z:tw.z,vx:dir.x*20,vy:dir.y*20,vz:dir.z*20,life:2,dmg:tw.atk});
+    for(let j=0;j<3;j++)spawnP(tw.x,tw.y+.5,tw.z,0xffaa00);
+    if(netOk)netSend({t:"ts",ox:+tw.x.toFixed(1),oy:+tw.y.toFixed(1),oz:+tw.z.toFixed(1),tx:+nearest.position.x.toFixed(1),ty:+(nearest.position.y+1).toFixed(1),tz:+nearest.position.z.toFixed(1)},0);
+  })}
+
 function updateBullets(dt){
   for(let i=bullets.length-1;i>=0;i--){
     const b=bullets[i];
     b.x+=b.vx*dt;b.y+=b.vy*dt;b.z+=b.vz*dt;b.life-=dt;
     if(b.mesh){b.mesh.position.set(b.x,b.y,b.z);b.mesh.lookAt(b.x+b.vx,b.y+b.vy,b.z+b.vz)}
-    if(b.trail){b.trailTimer+=dt;
-      if(b.trailTimer>0.02){b.trailTimer=0;
-        for(let j=b.trail.length-1;j>0;j--){b.trail[j].position.copy(b.trail[j-1].position);b.trail[j].visible=b.trail[j-1].visible}
-        b.trail[0].position.set(b.x,b.y,b.z);b.trail[0].visible=true}}
-    let done=b.life<=0;
-    if(!done){
-      zombies.forEach(z=>{if(done||!z.alive)return;
-        const d=Math.sqrt((z.pos.x-b.x)**2+(z.pos.y+0.9*z.s-b.y)**2+(z.pos.z-b.z)**2);
-        if(d<1.2*z.s+0.3){
-          done=true;
-          z._hit=performance.now();
-          for(let k=0;k<6;k++)particles.spawn(new T.Vector3(b.x,b.y,b.z),new T.Vector3(),0xff4400,1,.15);
-          spawnDmgNum(b.x,b.y+.8,b.z,b.dmg);
-          applyZombieDamage(z.id,b.dmg);
-        }});
-    }
-    if(done)freeBullet(i);
-  }
-}
+    if(b.life<=0){if(b.mesh)sc.remove(b.mesh);bullets.splice(i,1);continue}
+    for(let j=zombies.length-1;j>=0;j--){
+      const z=zombies[j];if(z.userData.dead)continue;
+      const d=Math.sqrt((z.position.x-b.x)**2+(z.position.y+1-b.y)**2+(z.position.z-b.z)**2);
+      if(d<1.5){
+        applyZombieDamage(j,b.dmg);
+        if(b.mesh)sc.remove(b.mesh);bullets.splice(i,1);break}}}}
 
-/* ============================ 打击反馈：伤害数字 / 资源飘字 ============================ */
-function makeTextSprite(text,color,w,h,font){
-  const cnv=document.createElement('canvas');cnv.width=w;cnv.height=h;
-  const ctx=cnv.getContext('2d');
-  ctx.fillStyle=color;ctx.font=font;ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(text,w/2,h/2);
-  return new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(cnv),transparent:true}));
-}
-function spawnDmgNum(x,y,z,n){
-  const s=makeTextSprite('-'+n,'#ff4444',64,32,'bold 24px Arial');
+// ============================ 粒子/飘字/资源动画 ============================
+let particles=[];
+function spawnP(px,py,pz,c){
+  for(let i=0;i<4;i++)particles.push({x:px,y:py,z:pz,vx:R(-2,2),vy:R(1,4),vz:R(-2,2),life:.5,maxLife:.5,color:c,size:R(.04,.1)})}
+function updateParticles(dt){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.vy-=10*dt;p.life-=dt;
+    if(p.life<=0)particles.splice(i,1)}}
+
+function makeTextSprite(text,bgColor,w,h,font){
+  const c=document.createElement("canvas");c.width=w;c.height=h;
+  const ctx=c.getContext("2d");if(bgColor){ctx.fillStyle=bgColor;ctx.fillRect(0,0,w,h)}
+  ctx.fillStyle="#fff";ctx.font=font;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(text,w/2,h/2);
+  return new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c),transparent:true,depthTest:false}))}
+
+function spawnDmgNum(x,y,z,dmg){
+  const s=makeTextSprite("-"+dmg,"rgba(0,0,0,0)",64,32,"bold 24px Arial");
   s.position.set(x,y,z);s.scale.set(1,.5,1);sc.add(s);
-  dmgNums.push({sprite:s,life:1.2,maxLife:1.2});
-}
+  dmgNums.push({sprite:s,life:1.5,maxLife:1.5})}
 function updateDmgNums(dt){
   for(let i=dmgNums.length-1;i>=0;i--){const d=dmgNums[i];
     d.life-=dt;d.sprite.position.y+=dt*2;d.sprite.material.opacity=d.life/d.maxLife;
     if(d.life<=0){sc.remove(d.sprite);d.sprite.material.map.dispose();d.sprite.material.dispose();dmgNums.splice(i,1)}}}
+
 function spawnResAnim(x,y,z,kind,count){
   for(let i=0;i<count;i++){
-    const s=makeTextSprite(kind==='iron'?'🟠':'⬜','rgba(0,0,0,0)',32,32,'20px Arial');
+    const s=makeTextSprite(kind==="iron"?"🟠":"⬜","rgba(0,0,0,0)",32,32,"20px Arial");
     s.position.set(x+(Math.random()-.5)*.6,y+Math.random(),z+(Math.random()-.5)*.6);
-    s.scale.set(.5,.5,1);sc.add(s);
-    resAnims.push({sprite:s,life:1.5,maxLife:1.5})}}
+    s.scale.set(.5,.5,1);sc.add(s);resAnims.push({sprite:s,life:1.5,maxLife:1.5})}}
 function updateResAnims(dt){
   for(let i=resAnims.length-1;i>=0;i--){const r=resAnims[i];
     r.life-=dt;r.sprite.position.y+=dt*3;r.sprite.material.opacity=r.life/r.maxLife;
     if(r.life<=0){sc.remove(r.sprite);r.sprite.material.map.dispose();r.sprite.material.dispose();resAnims.splice(i,1)}}}
-function bossWarn(msg){
-  const el=$("boss-warn");el.textContent=msg;el.style.opacity=1;
-  setTimeout(()=>el.style.opacity=0,3000)}
 
+// ============================ 伤害/死亡 ============================
+function damagePlayer(d){
+  if(P.hcd>0||P.dead)return;
+  P.hp=Math.max(0,P.hp-d);P.hcd=0.5;
+  shakeScreen(.15);vignette(.4);
+  if(P.hp<=0){P.dead=true;P.respawn=performance.now()+5000;
+    $("dinfo").textContent="得分: "+P.score+" | 击杀: "+P.kills+" | 第 "+wave+" 波";
+    $("ov-death").style.display="flex"}}
+function respawn(){
+  P.dead=false;P.hp=100;P.pos.set(56,getH(56,56)+3,56);P.vel.set(0,0,0);
+  $("ov-death").style.display="none"}
+function shakeScreen(a){const v=$("vignette");v.style.boxShadow="inset 0 0 120px "+(30+a*40)+"px rgba(160,0,0,"+(a*0.5)+")";setTimeout(()=>{if(v)v.style.boxShadow="inset 0 0 120px 40px rgba(120,0,0,0)";},150)}
+function vignette(a){const v=$("vignette");v.style.boxShadow="inset 0 0 120px "+(30+a*40)+"px rgba(160,0,0,"+(a*0.5)+")";setTimeout(()=>{if(v)v.style.boxShadow="inset 0 0 120px 40px rgba(120,0,0,0)";},150)}
 
-function damage(a,dmg,src){if(!a.alive)return;a.hp-=dmg;if(a.hp<=0){a.hp=0;killPlayer(a,src);}updateActorHp(a);if(a===me){vignette(0.5);playHurt();shakeAmt=0.3;}}
-function killPlayer(a,src){a.alive=false;a.respawn=performance.now()+4000;sc.remove(a.mesh);if(a===me){center("你被僵尸击倒，4秒后重生");flashRed();shakeAmt=0.6;toast("你被击倒",true);
-  $("dinfo").textContent="得分 "+me.score+" | 第 "+_wave+" 波";$("ov-death").style.display="flex";
-  setTimeout(()=>{$("ov-death").style.display="none";},2500);}}
+// ============================ UI ============================
+function updateUI(){
+  if(!P.hp&&P.hp!==0)return;
+  const pct=Math.max(0,P.hp);
+  $("hp-bar").style.width=pct+"%";
+  $("hp-text").textContent=Math.max(0,Math.round(P.hp))+"/100";
+  $("hp-wrap").style.borderColor=P.hp<30?"#f44":"#555";
+  $("stone-count").textContent="⬜ "+P.stone;
+  $("iron-count").textContent="🟠 "+P.iron;
+  $("score-info").textContent="🎯 "+P.score+"　击杀 "+P.kills;
+  $("online-info").textContent="玩家 "+(peers.size+1)+(netOk?"（联机）":"（单机）");
+  const cd=Math.max(0,Math.ceil((waveT)));
+  $("wave-info").textContent=wave>0?("⚔️ 第 "+wave+" 波"+(cd>0?" | 下一波 "+cd+"s":"")):"准备开始";
+  let hb="";
+  for(let i=0;i<2;i++){
+    const it=hbar[i],act=i===slot?"act":"";
+    hb+='<div class="hs '+act+'" onclick="window.selectSlot('+i+')">'+(it===10?"⬜":"🏹")+'<span class="lb">'+(it===10?"围墙":"箭塔")+'</span><span class="ct">'+(it===10?P.stone:P.iron)+'</span></div>'}
+  $("hotbar").innerHTML=hb}
+window.selectSlot=i=>{slot=i;updateUI()};
+function showToast(msg){$("toast").textContent=msg;$("toast").className="show";setTimeout(()=>$("toast").className="",2000)}
+function showBossWarn(msg){const el=$("boss-warn");el.textContent=msg;el.style.opacity=1;setTimeout(()=>el.style.opacity=0,3000)}
 
-/* ============================ 网络 ============================ */
-let mq=null, netOk=false, hosts=["wss://broker.emqx.io:8084/mqtt","wss://test.mosquitto.org:8081/mqtt"];
-let room="1", myId="u"+Math.random().toString(36).slice(2,8), myName="玩家";
-const peers=new Map();
-const actors=new Map();
-function isHost(){let h=myId;peers.forEach((v,id)=>{if(id<h)h=id;});return h===myId;}
-function netSend(o,q){if(mq&&netOk)try{mq.publish("surv/"+room+"/e",JSON.stringify(o),{qos:q||0});}catch(e){}}
-function netStart(){
-  if(typeof mqtt==='undefined'){netOk=false;console.log('mqtt unavailable - single player');return;}
-  let i=0; const tryNext=()=>{ if(i>=hosts.length)return; netOk=false;
-    const c=mqtt.connect(hosts[i],{username:"fdl",password:"x",clean:true,reconnectPeriod:0,connectTimeout:4000});
-    c.on("connect",()=>{mq=c;netOk=true;i=-1;c.subscribe("surv/"+room+"/e",{qos:1});toast("已联网");});
-    c.on("error",()=>{i++;if(i<hosts.length)tryNext();});
-    c.on("close",()=>{netOk=false;setTimeout(()=>{if(!netOk&&i>=0){i=0;tryNext();}},3000);});
-    c.on("message",(tp,p)=>{try{onNet(JSON.parse(p.toString()));}catch(e){}});
-  };
-  tryNext();
-}
-let _st=0;
-function netTick(now){
-  if(!netOk)return; if(now-_st<33)return; _st=now;
-  netSend({t:"s",from:myId,id:myId,n:myName,x:+me.pos.x.toFixed(2),y:+me.pos.y.toFixed(2),z:+me.pos.z.toFixed(2),yw:+yaw.toFixed(3),pt:+pitch.toFixed(3),hp:Math.round(me.hp),a:me.alive?1:0,st:me.stone,ir:me.iron,k:me.kills},1);
-}
-function onNet(o){
-  if(!o||o.from===myId)return;
-  if(o.t==="s"){
-    const now=performance.now();
-    let a=actors.get(o.from);
-    if(!a){a=newActor(o.from,o.n||"?",0,false);labelActor(a);actors.set(o.from,a);}
-    if(o.n){a.name=o.n;labelActor(a);}
-    a.yaw=o.yw;a.pitch=o.pt;a.hp=o.hp;a.alive=o.a===1;a.kills=o.k||0;a.stone=o.st||0;a.iron=o.ir||0;
-    const np=new T.Vector3(clampX(o.x),o.y,clampZ(o.z));
-    if(a.targetPos)a._prev=a.pos.clone();else a.targetPos=np.clone();
-    a.targetPos=np.clone();
-    updateActorHp(a);
-    a.mesh.visible=a.alive;
-    peers.set(o.from,{id:o.from,pos:new T.Vector3(clampX(o.x),o.y,clampZ(o.z)),alive:o.a===1,last:now});
-  } else if(o.t==="sh"){
-    const o0=new T.Vector3(o.ox,o.oy,o.oz),d=new T.Vector3(o.dx,o.dy,o.dz);
-    const end=o0.clone().add(d.clone().multiplyScalar(9));
-    const m=addTracer(o0,end);setTimeout(()=>sc.remove(m),90);
-    const mp=o0.clone().add(d.clone().multiplyScalar(0.5));spawnMuzzle(mp,d);
-  } else if(o.t==="zh"){
-    if(isHost())applyZHit(o.zid,o.dmg,o.from);
-  } else if(o.t==="zhit"){
-    if(o.to===myId)damage(me,o.dmg,{name:"僵尸"});
-  } else if(o.t==="zd"){
-    const zb=zombies.get(o.zid);if(zb){sc.remove(zb.mesh);zombies.delete(o.zid);}
-    (o.loot||"s1").split(",").forEach(part=>{
-      const kind=part[0]==="i"?"iron":"stone", n=parseInt(part.slice(1))||1;
-      for(let i=0;i<n;i++)spawnDrop(o.x,o.y,o.z,kind);
-    });
-    if(o.killer===myId)me.kills++;
-  } else if(o.t==="blk"){
-    if(o.typ>=10){builtBlocks.set(key(o.x,o.y,o.z),o.typ);rebuildBuilt();}
-    else{blocks.set(key(o.x,o.y,o.z),o.typ);_rebuildT=performance.now()+30;}
-  } else if(o.t==="tw"){
-    const bx=o.x,by=o.y,bz=o.z;
-    if(!builtBlocks.get(key(bx,by+3,bz))){
-      for(let dy=0;dy<3;dy++)builtBlocks.set(key(bx,by+dy,bz),BW.TOWER);
-      builtBlocks.set(key(bx,by+3,bz),BW.TOWER_TOP);
-      towers.push({x:bx+.5,y:by+4,z:bz+.5,hp:15,atk:4,range:14,cd:0,key:key(bx,by,bz),owner:o.owner});
-      rebuildBuilt();
-    }
-  } else if(o.t==="rmt"){
-    removeTowerCells(o.x,o.y,o.z);rebuildBuilt();
-  } else if(o.t==="rmb"){
-    builtBlocks.delete(key(o.x,o.y,o.z));rebuildBuilt();
-  } else if(o.t==="ts"){
-    const from=new T.Vector3(o.ox,o.oy,o.oz),to=new T.Vector3(o.tx,o.ty,o.tz);
-    const m=addTracer(from,to);setTimeout(()=>sc.remove(m),90);
-  } else if(o.t==="bw"){
-    bossWarn("💀 BOSS 第"+o.w+"波！");
-  } else if(o.t==="wv"){
-    _waveNet=o.w;_nextWaveNet=o.n;
-  } else if(o.t==="z"){
-    const ids=new Set();
-    for(const it of o.list){const id=it[0];ids.add(id);
-      let zb=zombies.get(id);
-      if(!zb){zb=makeZombie(id,it[5]);zombies.set(id,zb);}
-      zb.targetPos=new T.Vector3(it[1],it[2],it[3]);zb.hp=it[4];zb.maxhp=zb.maxhp||it[4];
-    }
-    zombies.forEach((zb,id)=>{if(!ids.has(id)){sc.remove(zb.mesh);zombies.delete(id);}});
-  }
-}
+// ============================ 触屏 ============================
+let joyActive=false,joySX=0,joySY=0,joyId=null;
+const joyEl=$("joy"),joyK=$("joy-k");
+joyEl.addEventListener("touchstart",e=>{e.preventDefault();if(joyId!==null)return;
+  const t=e.changedTouches[0];joyId=t.identifier;
+  const r=joyEl.getBoundingClientRect();joySX=r.left+r.width/2;joySY=r.top+r.height/2;joyActive=true},{passive:false});
+joyEl.addEventListener("touchmove",e=>{e.preventDefault();if(!joyActive)return;
+  let t=null;for(const ct of e.changedTouches)if(ct.identifier===joyId){t=ct;break}
+  if(!t)return;const dx=t.clientX-joySX,dy=t.clientY-joySY;
+  const maxD=55;const cx=C(dx,-maxD,maxD),cy=C(dy,-maxD,maxD);
+  joyK.style.transform="translate("+(cx/maxD*26)+"px,"+(cy/maxD*26)+"px)";
+  jF=dy<-22?1:0;jB=dy>22?1:0;jL=dx<-22?1:0;jR=dx>22?1:0},{passive:false});
+const endJoy=e=>{for(const ct of e.changedTouches)if(ct.identifier===joyId){joyId=null;joyActive=false;jF=jB=jL=jR=0;joyK.style.transform="translate(-50%,-50%)"}};
+joyEl.addEventListener("touchend",endJoy);joyEl.addEventListener("touchcancel",endJoy);
+$("b-jump").addEventListener("touchstart",e=>{e.preventDefault();jJ=1},{passive:false});
+$("b-jump").addEventListener("touchend",()=>{jJ=0});$("b-jump").addEventListener("touchcancel",()=>{jJ=0});
+$("b-act").addEventListener("touchstart",e=>{e.preventDefault();doBuild()},{passive:false});
+$("b-del").addEventListener("touchstart",e=>{e.preventDefault();doDemolish()},{passive:false});
 
-/* ============================ 僵尸 AI（仅主机模拟） ============================ */
-let _wave=1, _nextWave=performance.now()+30000, _zCap=35, _zid=0, _nextSpawn=0, _lastZSnap=0, _lastWv=0;
-let _waveNet=1,_nextWaveNet=30;
-function spawnBoss(corner){
-  const id="z"+(_zid++);
-  const cx=corner[0]+(Math.random()*4-2), cz=corner[1]+(Math.random()*4-2);
-  const gy=getH(Math.round(cx),Math.round(cz))+0.1;
-  const zb=makeZombie(id,3);
-  zb.pos.set(cx,gy,cz);
-  zb.maxhp=100+_wave*15; zb.hp=zb.maxhp; zb.speed=2.4; zb.dmg=12+_wave*2;
-  zombies.set(id,zb);
-}
-function updateZombies(dt,now){
-  if(now>_nextWave){
-    _wave++;_nextWave=now+30000;_zCap=Math.min(90,30+_wave*5);
-    if(_wave%5===0){
-      const nB=1+Math.floor(_wave/10);
-      for(let i=0;i<nB;i++)spawnBoss(CORNERS[Math.floor(Math.random()*4)]);
-      toast("💀 BOSS波！巨型僵尸来袭！",true);bossWarn("💀 BOSS 第"+_wave+"波！(×"+nB+")");
-      if(netOk)netSend({t:"bw",w:_wave},1);
-    }else toast("第 "+_wave+" 波！僵尸更强了",true);
-    broadcastWv();
-  }
-  if(isHost()&&now-_lastWv>1000){_lastWv=now;broadcastWv();}
-  if(now>_nextSpawn && zombies.size<_zCap){
-    const corner=CORNERS[Math.floor(Math.random()*4)];
-    const n=1+Math.floor(_wave/2);
-    for(let i=0;i<n&&zombies.size<_zCap;i++){
-      const id="z"+(_zid++);
-      const cx=corner[0]+(Math.random()*4-2), cz=corner[1]+(Math.random()*4-2);
-      const gy=getH(Math.round(cx),Math.round(cz))+0.1;
-      const rr=Math.random(); const type=(rr<Math.min(0.35,_wave*0.03))?(rr<0.18?1:2):0;
-      const maxhp=30+_wave*12, speed=2.0+Math.min(2.6,_wave*0.12), dmg=6+_wave*2;
-      const zb=makeZombie(id,type); zb.pos.set(cx,gy,cz); zb.maxhp=maxhp; zb.hp=maxhp; zb.speed=speed; zb.dmg=dmg;
-      zombies.set(id,zb);
-    }
-    _nextSpawn=now+Math.max(1400,5000-_wave*220);
-  }
-  zombies.forEach(zb=>{
-    if(!zb.alive)return;
-    let best=null,bd=1e9;
-    if(me.alive){const d=zb.pos.distanceTo(me.pos);if(d<bd){bd=d;best=me.pos;}}
-    peers.forEach(p=>{if(p.pos&&p.alive){const d=zb.pos.distanceTo(p.pos);if(d<bd){bd=d;best=p.pos;}}});
-    if(best){
-      const dir=best.clone().sub(zb.pos);dir.y=0;const dist=dir.length();
-      if(dist>0.1){dir.normalize();zb.pos.x+=dir.x*zb.speed*dt;zb.pos.z+=dir.z*zb.speed*dt;zb.yaw=Math.atan2(dir.x,dir.z);}
-      if(dist<1.35 && now>zb.atkCd){
-        zb.atkCd=now+800;
-        let vic=null;
-        if(me.alive&&zb.pos.distanceTo(me.pos)<1.7)vic={id:myId};
-        peers.forEach(p=>{if(p.pos&&p.alive&&zb.pos.distanceTo(p.pos)<1.7)vic={id:p.id};});
-        if(vic){ if(vic.id===myId)damage(me,zb.dmg,{name:"僵尸"}); else netSend({t:"zhit",to:vic.id,dmg:zb.dmg,from:myId},1); }
-      }
-    }
-    zb.pos.y=getH(Math.round(zb.pos.x),Math.round(zb.pos.z))+0.1;
-    // 拆墙（主机权威，广播 rmb）
-    if(builtBlocks.size){
-      const bxx=Math.floor(zb.pos.x),byy=Math.round(zb.pos.y+0.9*zb.s),bzz=Math.floor(zb.pos.z);
-      for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){
-        const wk=key(bxx+dx,byy,bzz+dz);
-        if(builtBlocks.get(wk)&&Math.random()<dt*0.5){
-          builtBlocks.delete(wk);rebuildBuilt();
-          particles.spawn(new T.Vector3(bxx+dx+.5,byy+.5,bzz+dz+.5),new T.Vector3(),0x999999,8,.25);
-          if(netOk)netSend({t:"rmb",x:bxx+dx,y:byy,z:bzz+dz},1);
-        }
-      }
-    }
-  });
-}
-function broadcastWv(){if(netOk)netSend({t:"wv",w:_wave,n:Math.max(0,Math.ceil((_nextWave-performance.now())/1000))},0);}
-
-/* ============================ 粒子 / 音效 ============================ */
-class CubeParticles{constructor(){this.geo=new T.BoxGeometry(0.08,0.08,0.08);this.mat=new T.MeshBasicMaterial();this.meshes=[];this.vels=[];this.life=[];this.max=150;for(let i=0;i<this.max;i++){const m=new T.Mesh(this.geo,this.mat.clone());m.visible=false;sc.add(m);this.meshes.push(m);this.vels.push(new T.Vector3());this.life.push(0);}this.p=0;}
-  spawn(pos,vel,color,count,scale){for(let i=0;i<count;i++){const idx=this.p;this.p=(this.p+1)%this.max;const m=this.meshes[idx];m.visible=true;m.position.copy(pos);m.material.color.setHex(color);const s=scale*(0.6+Math.random()*0.8);m.scale.set(s,s,s);this.vels[idx].set((Math.random()-0.5)*4,(Math.random()*3+1),(Math.random()-0.5)*4).add(vel);this.life[idx]=0.5+Math.random()*0.3;}}
-  update(dt){for(let i=0;i<this.max;i++){if(this.life[i]<=0)continue;this.life[i]-=dt;const m=this.meshes[i];this.vels[i].y-=12*dt;m.position.addScaledVector(this.vels[i],dt);if(this.life[i]<=0)m.visible=false;}}}
-const particles=new CubeParticles();
-let actx=null;
-function ac(){if(!actx)try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}return actx;}
-function blip(freq,dur,type,vol){const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain();o.type=type||"square";o.frequency.value=freq;g.gain.value=vol||0.06;o.connect(g);g.connect(a.destination);o.start();g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+dur);o.stop(a.currentTime+dur);}
-function playShoot(){blip(220,0.08,"square",0.05);}
-function playHit(){blip(140,0.08,"sawtooth",0.05);}
-function playHurt(){blip(90,0.2,"sawtooth",0.08);}
-
-/* ============================ 控制 ============================ */
-let yaw=0,pitch=0;
-const input={x:0,y:0,jump:false,shoot:false};
-const speed=6;
-const keys={};
-function selectSlot(i){slot=i;}
-addEventListener("keydown",e=>{keys[e.code]=true;
-  if(e.code==="Space")e.preventDefault();
-  if(me&&!me.alive&&e.code==="KeyR"&&me.respawn<=performance.now())respawn();
-  if(e.code==="Digit1")selectSlot(0);
-  if(e.code==="Digit2")selectSlot(1);
-  if((e.code==="KeyQ"||e.code==="KeyE")&&me&&me.alive)doBuild();
-  if(e.code==="KeyX"&&me&&me.alive)doDemolish();
-  if(e.code==="Space")input.jump=true;});
-addEventListener("keyup",e=>{keys[e.code]=false;});
-cv.addEventListener("contextmenu",e=>e.preventDefault());
-let mouseL=false;
-cv.addEventListener("mousedown",e=>{
-  if(e.button===0){mouseL=true;if(me.alive)fire();}
-  if(e.button===2)doBuild();
-});
-cv.addEventListener("mouseup",e=>{if(e.button===0)mouseL=false;});
-addEventListener("wheel",e=>{if(!me)return;slot=(slot+(e.deltaY<0?1:hbar.length-1))%hbar.length;e.preventDefault();},{passive:false});
-cv.addEventListener("click",()=>{if(me.alive&&document.pointerLockElement!==cv)cv.requestPointerLock();});
-addEventListener("mousemove",e=>{if(document.pointerLockElement===cv){yaw-=e.movementX*0.0024;pitch=Math.max(-1.5,Math.min(1.5,pitch-e.movementY*0.0024));}});
-function readInput(){input.y=(keys.KeyW?1:0)-(keys.KeyS?1:0);input.x=(keys.KeyD?1:0)-(keys.KeyA?1:0);}
-// 触摸
-const joy=document.getElementById("joy"),joyn=document.getElementById("joyn");
-let jid=null,jcx=0,jcy=0;
-joy.addEventListener("touchstart",e=>{const t=e.changedTouches[0];jid=t.identifier;jcx=t.clientX;jcy=t.clientY;},{passive:true});
-joy.addEventListener("touchmove",e=>{for(const t of e.changedTouches){if(t.identifier!==jid)continue;let dx=t.clientX-jcx,dy=t.clientY-jcy;const r=Math.hypot(dx,dy)||1;const cl=Math.min(r,45);dx=dx/r*cl;dy=dy/r*cl;joyn.style.transform=`translate(${-50+dx}%,${-50+dy}%)`;input.x=dx/45;input.y=-dy/45;}},{passive:true});
-joy.addEventListener("touchend",e=>{for(const t of e.changedTouches){if(t.identifier!==jid)continue;jid=null;joyn.style.transform="translate(-50%,-50%)";input.x=0;input.y=0;}},{passive:true});
-document.getElementById("bshoot").addEventListener("touchstart",e=>{e.preventDefault();if(me.alive)fire();});
-document.getElementById("bjump").addEventListener("touchstart",e=>{e.preventDefault();if(me.alive&&me.onGround){me.vel.y=8.2;me.onGround=false;}});
-document.getElementById("bbuild").addEventListener("touchstart",e=>{e.preventDefault();doBuild();});
-document.getElementById("bdel").addEventListener("touchstart",e=>{e.preventDefault();doDemolish();});
-document.getElementById("hotbar").addEventListener("click",e=>{const el=e.target.closest(".hs");if(el)selectSlot(+el.dataset.i);});
-// 触屏：拖动屏幕转视角，轻点屏幕 = 在该点建造
+// 触屏拖动转视角 + 轻点建造
 let lookIds={};
-cv.addEventListener("touchstart",e=>{for(const t of e.changedTouches)lookIds[t.identifier]={x:t.clientX,y:t.clientY,sx:t.clientX,sy:t.clientY,t0:performance.now()};},{passive:true});
+cv.addEventListener("touchstart",e=>{for(const t of e.changedTouches)lookIds[t.identifier]={x:t.clientX,y:t.clientY,sx:t.clientX,sy:t.clientY,t0:performance.now()}},{passive:true});
 cv.addEventListener("touchmove",e=>{for(const t of e.changedTouches){
   const p=lookIds[t.identifier];if(!p)continue;
-  yaw-=(t.clientX-p.x)*.006;pitch=Math.max(-1.5,Math.min(1.5,pitch-(t.clientY-p.y)*.006));
+  P.yaw-=(t.clientX-p.x)*.006;P.pitch=C(P.pitch-(t.clientY-p.y)*.006,-1.5,1.5);
   p.x=t.clientX;p.y=t.clientY;}},{passive:true});
 const endLook=e=>{for(const t of e.changedTouches){
   const p=lookIds[t.identifier];if(!p)continue;
   const moved=Math.hypot(t.clientX-p.sx,t.clientY-p.sy);
-  if(moved<12&&performance.now()-p.t0<300&&me&&me.alive){
-    const rect=cv.getBoundingClientRect();
-    const nx=((t.clientX-rect.left)/rect.width)*2-1, ny=-((t.clientY-rect.top)/rect.height)*2+1;
-    doBuild(getTarget(nx,ny));
-  }
+  const dur=performance.now()-p.t0;
+  if(moved<12&&dur<300)buildAtPoint(t.clientX,t.clientY);
   delete lookIds[t.identifier];}};
 cv.addEventListener("touchend",endLook);cv.addEventListener("touchcancel",endLook);
+function buildAtPoint(cx,cy){
+  const rect=cv.getBoundingClientRect();
+  const nx=((cx-rect.left)/rect.width)*2-1;
+  const ny=-((cy-rect.top)/rect.height)*2+1;
+  const t=getTarget(nx,ny);if(!t){showToast("请对准地面或方块");return}doBuild(t)}
 
-/* ============================ HUD ============================ */
-const $=id=>document.getElementById(id);
-let toastT=0;
-function toast(msg,bad){const el=$("toast");el.textContent=msg;el.style.color=bad?"#ffb3b3":"#fff";el.style.opacity=1;toastT=performance.now()+1800;}
-function center(msg){$("center").textContent=msg;$("center").style.opacity=1;}
-function hideCenter(){$("center").style.opacity=0;}
-function flashRed(){const v=$("vignette");v.style.boxShadow="inset 0 0 120px 50px rgba(160,0,0,.5)";setTimeout(()=>v.style.boxShadow="inset 0 0 120px 40px rgba(120,0,0,0)",200);}
-function vignette(a){const v=$("vignette");v.style.boxShadow=`inset 0 0 120px ${30+a*40}px rgba(160,0,0,${a*0.5})`;setTimeout(()=>{if(v)v.style.boxShadow="inset 0 0 120px 40px rgba(120,0,0,0)";},150);}
-let _uiSig="";
-function updateUI(){
-  if(!me)return;
-  const pct=Math.max(0,me.hp);
-  $("hp-bar").style.width=pct+"%";
-  $("hp-text").textContent=Math.max(0,Math.round(me.hp))+"/100";
-  const low=me.hp<30;
-  $("stone-count").textContent="⬜ "+me.stone;
-  $("iron-count").textContent="🟠 "+me.iron;
-  $("score-info").textContent="🎯 "+me.score+"　击杀 "+me.kills;
-  $("fps-info").textContent=_lastFps>0?(_lastFps+" FPS"):"";
-  const cd=isHost()?Math.max(0,Math.ceil((_nextWave-performance.now())/1000)):(_nextWaveNet||0);
-  $("wave-info").textContent=_wave>0?("⚔️ 第 "+_wave+" 波"+(cd>0?" | 下一波 "+cd+"s":"")):"准备开始";
-  // hotbar 只在数值/选择变化时重建 DOM
-  const sig=me.stone+"|"+me.iron+"|"+slot+"|"+low;
-  if(sig!==_uiSig){
-    _uiSig=sig;
-    $("hp-bar").style.background=low?"linear-gradient(#e33,#a22)":"linear-gradient(#5fe03a,#3fae22)";
-    $("hp-wrap").style.borderColor=low?"#f44":"#555";
-    $("online-info").textContent="玩家 "+(peers.size+1)+(netOk?"（联机）":"（单机）");
-    let hb="";
-    for(let i=0;i<2;i++){
-      const it=hbar[i],act=i===slot?"act":"";
-      hb+='<div class="hs '+act+'" data-i="'+i+'">'+(it===10?"⬜":"🏹")+'<span class="lb">'+(it===10?"围墙":"箭塔")+'</span><span class="ct">'+(it===10?me.stone:me.iron)+'</span></div>';
-    }
-    $("hotbar").innerHTML=hb;
-  }
-}
+// ============================ 键鼠 ============================
+let mouseDown={};
+cv.addEventListener("mousedown",e=>{
+  mouseDown[e.button]=true;
+  if(e.button===0&&!P.dead){/* 射击在主循环中处理 */}
+  if(e.button===2)doDemolish();
+  if(!document.pointerLockElement)cv.requestPointerLock()});
+cv.addEventListener("mouseup",e=>{mouseDown[e.button]=false});
+cv.addEventListener("contextmenu",e=>e.preventDefault());
+cv.addEventListener("mousemove",e=>{
+  if(document.pointerLockElement===cv){P.yaw-=e.movementX*.002;P.pitch=C(P.pitch-e.movementY*.002,-1.5,1.5)}
+  else if(mouseDown[2]){P.yaw-=e.movementX*.002;P.pitch=C(P.pitch-e.movementY*.002,-1.5,1.5)}});
+cv.addEventListener("wheel",e=>{
+  if(e.deltaY<0)slot=(slot+1)%hbar.length;else slot=(slot-1+hbar.length)%hbar.length;
+  updateUI();e.preventDefault()},{passive:false});
+addEventListener("keydown",e=>{keys[e.code]=true;
+  if(e.code==="Space")e.preventDefault();
+  if(e.code==="Digit1")window.selectSlot(0);if(e.code==="Digit2")window.selectSlot(1);
+  if(e.code==="KeyE"||e.code==="KeyQ")doBuild();
+  if(e.code==="KeyX"||e.code==="KeyR")doDemolish();
+  if(e.code==="KeyR"&&P.dead)respawn()});
+addEventListener("keyup",e=>{keys[e.code]=false});
+addEventListener("resize",()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();ren.setSize(innerWidth,innerHeight)});
 
-/* ============================ 玩家初始化 ============================ */
-let me=null;
-function spawnPoint(){return new T.Vector3(W/2,getH(W/2,D/2)+0.2,D/2);}
-function respawn(){if(me.alive)return;me.alive=true;me.hp=100;me.respawn=0;me.pos.copy(spawnPoint());me.vel.set(0,0,0);hideCenter();updateActorHp(me);}
+// ============================ 射击（左键） ============================
+let _shootCD=0;
+function tryShoot(){
+  if(P.dead||_shootCD>0)return;
+  _shootCD=0.25;
+  // 简单射击：从摄像机位置向准星方向发射射线，命中僵尸造成伤害
+  rc.setFromCamera(new T.Vector2(0,0),cam);rc.far=30;
+  const hits=rc.intersectObjects(zombies.filter(z=>!z.userData.dead).flatMap(z=>z.children),false);
+  rc.far=Infinity;
+  if(hits.length>0){
+    // 找到被命中的僵尸
+    const hitObj=hits[0].object;
+    for(let i=0;i<zombies.length;i++){
+      const z=zombies[i];if(z.userData.dead)continue;
+      if(z.children.includes(hitObj)){applyZombieDamage(i,10);break}}}
+  shakeScreen(.05)}
 
-/* ============================ 主循环 ============================ */
-let last=performance.now(), _fc=0, _tgtCache=null;
-let _qT=performance.now(), _qC=0, _qLevel=0, _lastFps=0;
-function frame(){
-  const now=performance.now(); let dt=(now-last)/1000; last=now; if(dt>0.05)dt=0.05; _fc++;
-  readInput();
-  if(me.alive){
-    if(keys.Space&&me.onGround){me.vel.y=8.2;me.onGround=false;}
-    updatePhysics(dt,me);
-  } else if(me.respawn&&now>=me.respawn){respawn();}
+// ============================ 网络（MQTT联机） ============================
+let netOk=false,mqttClient=null;
+let peers=new Map(); // peerId -> {pos,yaw,hp,name,last}
+let actors=new Map(); // peerId -> mesh
+let _nextWave=0,_nextWaveNet=0;
 
-  // 视角
-  cam.position.set(me.pos.x,me.pos.y+1.5,me.pos.z);
-  const cp=Math.cos(pitch),sp=Math.sin(pitch);
-  const dir=new T.Vector3(-Math.sin(yaw)*cp,sp,-Math.cos(yaw)*cp);
-  const sh=shakeAmt; if(sh>0){cam.position.x+=(Math.random()-0.5)*sh;cam.position.y+=(Math.random()-0.5)*sh;shakeAmt*=0.8;if(shakeAmt<0.01)shakeAmt=0;}
-  cam.lookAt(cam.position.clone().add(dir));
+const BROKER1="wss://b21 mqtt.section.io:8884/mqtt";
+const BROKER2="wss://broker.emqx.io:8084/mqtt";
 
-  // 武器视图
-  gunGroup.position.set(0,-0.22,-0.35);
-  gunGroup.rotation.set(0,yaw,0);
-  recoil=Math.max(0,recoil-dt*6);
-  gunGroup.position.z=-(0.35-recoil*0.08);
-  if(muzzleT>now){const mp=gunWorld();} // muzzle spawned in fire()
+function netStart(){
+  if(typeof mqtt==="undefined"){showToast("联机模块加载失败（单机模式）");return}
+  const opts={clientId:"sv_"+myId,connectTimeout:4000,reconnectPeriod:3000,clean:true};
+  function tryConnect(url,idx){
+    return new Promise((resolve,reject)=>{
+      try{
+        const c=mqtt.connect(url,opts);
+        const timer=setTimeout(()=>{try{c.end(true)}catch(_){};reject("timeout")},5000);
+        c.on("connect",()=>{clearTimeout(timer);resolve(c)});
+        c.on("error",e=>{clearTimeout(timer);reject(e)});
+      }catch(e){reject(e)}})}
+  Promise.race([tryConnect(BROKER1,0),tryConnect(BROKER2,1)]).then(c=>{
+    mqttClient=c;netOk=true;showToast("✅ 联机成功");
+    c.subscribe("game/"+room+"/#");
+    c.publish("game/"+room+"/join",JSON.stringify({id:myId,name:myName}));
+    c.on("message",(topic,msg)=>{
+      try{handleNet(JSON.parse(msg.toString()))}catch(_){}});
+    // 心跳
+    setInterval(()=>{if(netOk)netSend({t:"hb",id:myId,name:myName,x:+P.pos.x.toFixed(1),y:+P.pos.y.toFixed(1),z:+P.pos.z.toFixed(1),yaw:+P.yaw.toFixed(2),hp:P.hp},0)},100);
+  }).catch(()=>{showToast("联机失败（单机模式）")})}
 
-  // 主机模拟僵尸
-  if(isHost())updateZombies(dt,now);
+function netSend(obj,qos){
+  if(!mqttClient||!netOk)return;
+  try{mqttClient.publish("game/"+room+"/"+myId,JSON.stringify(obj),{qos:qos||0})}catch(_){}}
 
-  // 僵尸快照广播
-  if(isHost()&&now-_lastZSnap>100){_lastZSnap=now;const list=[];zombies.forEach(zb=>{list.push([zb.id,+zb.pos.x.toFixed(2),+zb.pos.y.toFixed(2),+zb.pos.z.toFixed(2),Math.round(zb.hp),zb.type]);});netSend({t:"z",from:myId,list},0);}
+function handleNet(msg){
+  if(msg.id===myId)return;
+  if(msg.t==="hb"){
+    if(!peers.has(msg.id)){peers.set(msg.id,{pos:new T.Vector3(msg.x,msg.y,msg.z),yaw:msg.yaw,hp:msg.hp,name:msg.name||"??",last:performance.now()});
+      // 创建远程角色模型
+      const g=new T.Group();
+      const bm2=new T.MeshLambertMaterial({color:0x3366ff});
+      g.add(new T.Mesh(new T.BoxGeometry(.7,.9,.4),bm2),new T.Mesh(new T.BoxGeometry(.45,.45,.45),bm2));
+      g.children[0].position.y=.95;g.children[1].position.y=1.65;
+      sc.add(g);actors.set(msg.id,g);
+      showToast("👋 "+msg.name+" 加入了游戏")}
+    else{
+      const p=peers.get(msg.id);p.last=performance.now();
+      p.pos.set(msg.x,msg.y,msg.z);p.yaw=msg.yaw;p.hp=msg.hp;p.name=msg.name||p.name}
+    // 同步波次
+    if(msg.wave!==undefined&&msg.wave>wave){wave=msg.wave;waveT=msg.waveT||25}
+  }else if(msg.t==="bw"){
+    builtBlocks.set(key(msg.x,msg.y,msg.z),BW.WALL);rebuildBuilt();
+  }else if(msg.t==="rmb"){
+    builtBlocks.delete(key(msg.x,msg.y,msg.z));rebuildBuilt();
+  }else if(msg.t==="tw"){
+    const bx=msg.x,by=msg.y,bz=msg.z;
+    builtBlocks.set(key(bx,by,bz),BW.TOWER);builtBlocks.set(key(bx,by+1,bz),BW.TOWER);
+    builtBlocks.set(key(bx,by+2,bz),BW.TOWER);builtBlocks.set(key(bx,by+3,bz),BW.TOWER_TOP);
+    towers.push({x:bx+.5,y:by+4,z:bz+.5,hp:15,atk:4,range:14,cd:0,key:key(bx,by,bz)});
+    rebuildBuilt();
+  }else if(msg.t==="rmt"){
+    for(let dy=0;dy<4;dy++)builtBlocks.delete(key(msg.x,msg.y+dy,msg.z));
+    towers=towers.filter(tw=>tw.key!==key(msg.x,msg.y,msg.z));rebuildBuilt();
+  }else if(msg.t==="ts"){
+    // 远程箭矢视觉
+    const dir=new T.Vector3(msg.tx-msg.ox,msg.ty-msg.oy,msg.tz-msg.oz).normalize();
+    const arrow=new T.Group();
+    const shaft=new T.Mesh(new T.CylinderGeometry(0.03,0.03,1.2,4),new T.MeshLambertMaterial({color:0x8B4513}));
+    shaft.rotation.x=Math.PI/2;
+    const head=new T.Mesh(new T.ConeGeometry(0.08,0.3,4),new T.MeshLambertMaterial({color:0x666666}));
+    head.position.z=-0.75;head.rotation.x=-Math.PI/2;
+    arrow.add(shaft,head);arrow.position.set(msg.ox,msg.oy,msg.oz);
+    arrow.lookAt(msg.tx,msg.ty,msg.tz);sc.add(arrow);
+    bullets.push({mesh:arrow,x:msg.ox,y:msg.oy,z:msg.oz,vx:dir.x*20,vy:dir.y*20,vz:dir.z*20,life:2,dmg:4});
+  }else if(msg.t==="zk"){
+    const z=zombies[msg.zid];if(z&&!z.userData.dead)killZ(z);
+  }else if(msg.t==="wv"){
+    // 波次同步
+    if(msg.wave>wave){wave=msg.wave;waveT=msg.waveT||25}
+  }}
 
-  // 僵尸渲染
-  zombies.forEach(zb=>{
-    if(zb.targetPos&&!isHost())zb.pos.lerp(zb.targetPos,0.5);
-    zb.mesh.position.copy(zb.pos); zb.mesh.rotation.y=zb.yaw;
-    zb.mesh.visible=zb.alive;
-    if(zb.hbG)zb.hbG.lookAt(cam.position);
-    if(zb.hpFg){const r=Math.max(0,zb.hp)/zb.maxhp;zb.hpFg.scale.x=r;zb.hpFg.position.x=-(0.43*zb.s)*(1-r);
-      zb.hpFg.material.color.setHex(r>0.5?0x00ff00:r>0.25?0xffff00:0xff0000);}
-    if(zb._hit&&now-zb._hit<120){zb.mesh.children.forEach(c=>{if(c.material&&c.material.emissive)c.material.emissive.setHex(0x552222);});}else{zb.mesh.children.forEach(c=>{if(c.material&&c.material.emissive)c.material.emissive.setHex(0x000000);});}
-  });
+function updatePeers(){
+  actors.forEach((mesh,id)=>{
+    const p=peers.get(id);
+    if(!p||performance.now()-p.last>6000){sc.remove(mesh);actors.delete(id);peers.delete(id);return}
+    mesh.position.copy(p.pos);mesh.rotation.y=p.yaw});
+  // 同步波次给客户端
+  if(netOk&&wave>0)netSend({t:"wv",wave,waveT:Math.max(0,waveT)},0)}
 
-  // 掉落物
-  for(let i=pickups.length-1;i>=0;i--){const pk=pickups[i];pk.mesh.rotation.y+=dt*2;pk.mesh.position.y+=Math.sin(now*0.003+pk.spin)*0.003;
-    if(me.alive&&pk.mesh.position.distanceTo(me.pos.clone().setY(me.pos.y+0.9))<1.5){
-      if(pk.kind==="iron"){me.iron++;toast("+1 🟠 铁块");}else{me.stone++;toast("+1 ⬜ 石头");}
-      spawnResAnim(pk.mesh.position.x,pk.mesh.position.y,pk.mesh.position.z,pk.kind,1);
-      sc.remove(pk.mesh);pickups.splice(i,1);}}
+// ============================ 主循环 ============================
+let lt=performance.now(),_fc=0;
+let particlesList=particles;
+function animate(){
+  requestAnimationFrame(animate);
+  const now=performance.now(),dt=Math.min((now-lt)/1000,.05);lt=now;
+  _fc++;
 
-  // 箭塔 / 弹道 / 反馈
-  updateTowers(dt);updateBullets(dt);updateDmgNums(dt);updateResAnims(dt);
-  if(mouseL&&me.alive)fire();
+  // 世界重建（延迟）
+  if(_rebuildT&&now>_rebuildT){_rebuildT=0;rebuildTerrain()}
+  if(_rebuildBT&&now>_rebuildBT){_rebuildBT=0;rebuildBuilt()}
 
-  // 建造预览 / 高亮 / 射程圈（射线检测很贵：每3帧做一次并缓存）
-  if(me.alive&&_fc%3===0)_tgtCache=getTarget();
-  const tgt=me.alive?_tgtCache:null;
+  if(P.dead){
+    if(now>=P.respawn)respawn();
+    ren.render(sc,cam);updateUI();return}
+
+  // 射击
+  _shootCD=Math.max(0,_shootCD-dt);
+  if(mouseDown[0]&&!P.dead)tryShoot();
+
+  // 玩家
+  updatePlayer(dt);
+  cam.position.copy(P.pos);cam.position.y+=EY;
+  cam.rotation.order="YXZ";cam.rotation.y=P.yaw;cam.rotation.x=P.pitch;
+
+  // 僵尸（主机模拟）
+  updateZombies(dt);
+
+  // 波次
+  waveT-=dt;
+  if(waveT<=0&&P.hp>0){spawnWave();waveT=Math.max(15,30-wave)}
+
+  // 箭塔/子弹
+  updateTowers(dt);updateBullets(dt);
+  updateDmgNums(dt);updateResAnims(dt);updateParticles(dt);
+  updatePeers();
+
+  // 准星/建造预览
+  const tgt=getTarget();
   if(tgt&&hlMesh){
     hlMesh.visible=true;hlMesh.position.set(tgt.x+.5,tgt.y+.5,tgt.z+.5);
     previewMesh.visible=true;previewMesh.position.set(tgt.nx+.5,tgt.ny+.5,tgt.nz+.5);
     if(hbar[slot]===11){
       rangeIndicator.visible=true;rangeIndicator.position.set(tgt.nx+.5,tgt.ny+.1,tgt.nz+.5);
-      previewMesh.material.color.setHex(me.iron>=2?0x00ff00:0xff0000);
+      previewMesh.material.color.setHex(P.iron>=2?0x00ff00:0xff0000);
     }else{
       rangeIndicator.visible=false;
-      previewMesh.material.color.setHex(me.stone>0?0x00ff00:0xff0000);
+      previewMesh.material.color.setHex(P.stone>0?0x00ff00:0xff0000);
     }
   }else if(hlMesh){hlMesh.visible=false;rangeIndicator.visible=false;previewMesh.visible=false}
 
-  // 玩家动画（me 自身仅第一人称，不渲染身体；远程角色渲染）
-  // 远程角色插值
-  actors.forEach(a=>{if(a.targetPos){if(a._prev){const al=0.5;a.pos.lerp(a.targetPos,0.5);}else a.pos.copy(a.targetPos);a._prev=a.pos.clone();}a.mesh.position.copy(a.pos);a.mesh.rotation.y=a.yaw;
-    const moving=(Math.abs(input.y)+Math.abs(input.x))>0;
-    const sw=Math.sin(now*0.012)*0.5*(moving?1:0);if(a.legL){a.legL.rotation.x=sw;a.legR.rotation.x=-sw;}
-    const h=Math.max(0,a.hp)/100;a.hpFg.scale.x=h;a.hpFg.position.x=-0.43*(1-h);a.hpFg.material.color.setHex(h>0.5?0x3ad13a:h>0.25?0xe3c73a:0xd13a3a);});
+  ren.render(sc,cam);updateUI()}
+let _rebuildT=0,_rebuildBT=0;
+// 测试用暴露
+window.P=P;window.zombies=zombies;window.towers=towers;window.blocks=blocks;window.builtBlocks=builtBlocks;window.doBuild=doBuild;window.doDemolish=doDemolish;window.selectSlot=i=>{slot=i};window.getTarget=getTarget;window.damagePlayer=damagePlayer;
 
-  // 重建地形（建造/破坏后）
-  if(_rebuildT&&now>_rebuildT){_rebuildT=0;rebuildTerrain();}
-
-  particles.update(dt);
-
-  // HUD
-  updateUI();
-
-  if(toastT&&now>toastT){$("toast").style.opacity=0;toastT=0;}
-
-  // 网络
-  if(netOk){netTick(now);}
-  // 连线清理
-  if(now%1000<20){peers.forEach((p,id)=>{if(now-p.last>6000)peers.delete(id);});}
-
-  renderer.render(sc,cam);
-  // 性能自适应 + 面板
-  _qC++;
-  if(now-_qT>3000){
-    _lastFps=Math.round(_qC*1000/(now-_qT));_qT=now;_qC=0;
-    if(_lastFps<22&&_qLevel===0){_qLevel=1;renderer.setPixelRatio(1);toast("已开启流畅模式");}
-    else if(_lastFps<14&&_qLevel===1){_qLevel=2;sc.fog.near=30;sc.fog.far=110;toast("已开启极速模式");}
-    const pp=$("perf-panel");
-    if(pp){pp.style.display='block';
-      const gpu=renderer.capabilities||{};
-      pp.textContent='FPS: '+_lastFps+'\n'+
-        'DPR: '+renderer.getPixelRatio()+'\n'+
-        '几何体: '+renderer.info.render.triangles+' tri / '+renderer.info.render.calls+' draw\n'+
-        '纹理: '+renderer.info.memory.textures+'\n'+
-        '模式: '+['高','流畅','极速'][_qLevel];}
-  }
-  requestAnimationFrame(frame);
-}
-
-/* ============================ 启动（分帧避免卡死） ============================ */
-function start(){
-  const btn=$("start");btn.disabled=true;btn.textContent="生成世界中…";
-  setTimeout(()=>{
-  try{
+// ============================ 启动 ============================
+function startGame(){
+  $("overlay").style.display="none";
   myName=($("name").value||"玩家").slice(0,12);
   room=($("room").value||"1").replace(/[^a-zA-Z0-9]/g,"")||"1";
-  $("overlay").style.display="none";
-  // 第1帧：生成地形数据
-  requestAnimationFrame(()=>{
-    genWorld();
-    // 第2帧：构建网格（最耗GPU的一步）
-    requestAnimationFrame(()=>{
-      rebuildTerrain();
-      // 第3帧：初始化游戏 + 启动循环
-      requestAnimationFrame(()=>{
-        me=newActor(myId,myName,0,true);
-        me.pos.copy(spawnPoint()); me.hp=100; me.kills=0; me.score=0; me.stone=15; me.iron=3; me.cd=0; me.alive=true;
-        sc.remove(me.mesh);
-        createHL(); initGun();
-        btn.dataset.ok=1;
-        netStart();
-        last=performance.now();
-        requestAnimationFrame(frame);
-      });
-    });
-  });
-  }catch(err){btn.disabled=false;btn.textContent="启动失败："+err.message;}
-  },50);
-}
-$("start").addEventListener("click",start);
-/* 品质切换按钮 */
-let _qualHigh=false;
-$("qual-btn").addEventListener("click",()=>{
-  _qualHigh=!_qualHigh;
-  if(_qualHigh){
-    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-    sc.fog.near=70;sc.fog.far=220;
-    $("qual-btn").textContent="⚡ 流畅模式";toast("已切换到高画质");
-  }else{
-    renderer.setPixelRatio(1);
-    sc.fog.near=30;sc.fog.far=110;
-    $("qual-btn").textContent="✨ 高画质";toast("已切换到流畅模式");
-  }
-  _qLevel=_qualHigh?0:1;_qT=performance.now();_qC=0;
-});
-addEventListener("resize",()=>{renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();});
+  genWorld();rebuildTerrain();rebuildBuilt();createHL();
+  P.pos.set(56,getH(56,56)+3,56);P.vel.set(0,0,0);
+  try{cv.requestPointerLock()}catch(_){}
+  netStart();
+  showToast("⚔️ 建造围墙和箭塔，抵御僵尸！")}
+
+$("btn-go").onclick=startGame;
+cv.addEventListener("click",()=>{if(!document.pointerLockElement)cv.requestPointerLock()});
+animate();
 </script>
 </body>
 </html>
