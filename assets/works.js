@@ -60,6 +60,14 @@ const works = [
     date: "2026-08-27",
     href: "works/survival.html"
   },
+  {
+    id: "shooting",
+    title: "联机射击闯关",
+    desc: "Minecraft风格多人联机射击游戏。WASD移动，左键开枪，和好友一起对抗越来越多的僵尸波次。",
+    tags: ["visual", "interactive", "html"],
+    date: "2026-08-27",
+    href: "works/联机射击闯关.html"
+  },
 
   // ─────────────────────────────────────────────────────────────
   // 📌 添加新作品示例（复制下面取消注释即可）：
