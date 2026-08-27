@@ -408,7 +408,7 @@ let vignetteAmp=0;
 function damagePlayer(dmg){if(player.dead)return;player.health=Math.max(0,player.health-dmg);vignetteAmp=Math.min(1,vignetteAmp+0.55);playHurt();updateHealthUI();if(netOk)netSend({t:"pl",id:myId},0);if(player.health<=0){player.dead=true;document.exitPointerLock();$('death-score').textContent='最终分数：'+score+' ｜ 坚持到第 '+wave+' 波';$('overlay-death').classList.remove('hidden')}}
 
 // ============================ 网络（MQTT联机） ============================
-let netOk=false,mqttClient=null,isHost=false;
+let netOk=false,mqttClient=null,isHost=true;
 const myId=Math.random().toString(36).slice(2,10);
 let myName="",room="1";
 const peers=new Map(),actors=new Map(),_allIds=[];
