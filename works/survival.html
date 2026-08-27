@@ -581,8 +581,8 @@ let peers=new Map(); // peerId -> {pos,yaw,hp,name,last}
 let actors=new Map(); // peerId -> mesh
 const _allIds=[]; // 所有已知 id（含自己），排序后 min = host
 
-const BROKER1="wss://b21-mqtt.section.io:8884/mqtt";
-const BROKER2="wss://broker.emqx.io:8084/mqtt";
+const BROKER1="wss://broker.emqx.io:8084/mqtt";
+const BROKER2="wss://b21-mqtt.section.io:8884/mqtt";
 
 function _updateHost(){
   _allIds.sort();
@@ -600,7 +600,8 @@ function netStart(){
         c.on("connect",()=>{clearTimeout(timer);resolve(c)});
         c.on("error",e=>{clearTimeout(timer);reject(e)});
       }catch(e){reject(e)}})}
-  Promise.race([tryConnect(BROKER1),tryConnect(BROKER2)]).then(c=>{
+  // 按顺序尝试 broker，第一个成功的用
+  tryConnect(BROKER1).catch(()=>tryConnect(BROKER2)).then(c=>{
     mqttClient=c;netOk=true;
     c.subscribe("game/"+room+"/#");
     c.publish("game/"+room+"/join",JSON.stringify({id:myId,name:myName}));
