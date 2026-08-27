@@ -603,6 +603,8 @@ function netStart(){
   // 按顺序尝试 broker，第一个成功的用
   tryConnect(BROKER1).catch(()=>tryConnect(BROKER2)).then(c=>{
     mqttClient=c;netOk=true;
+    _allIds.length=0;_allIds.push(myId); // 先加入自己
+    _updateHost();
     c.subscribe("game/"+room+"/#");
     c.publish("game/"+room+"/join",JSON.stringify({id:myId,name:myName}));
     c.on("message",(topic,msg)=>{
