@@ -433,8 +433,11 @@ function netStart(){
     setInterval(()=>{try{
       if(!netOk)return;_updateHost();
       netSend({t:"hb",id:myId,name:myName,x:+player.pos.x.toFixed(1),y:+player.pos.y.toFixed(1),z:+player.pos.z.toFixed(1),yaw:+player.yaw.toFixed(2),hp:player.health,wave,waveT:Math.max(0,waveTimer)},0);
+    }catch(e){console.error("NET_HB_ERROR:",e.message,e.stack);showError("联机错误: "+e.message,"⚠️ 联机错误",_errTag(e))}},50);
+    setInterval(()=>{try{
+      if(!netOk)return;
       if(isHost){const zs=[];for(const z of zombies){if(z.userData.z.dead)continue;zs.push({x:+z.position.x.toFixed(1),y:+z.position.y.toFixed(1),z:+z.position.z.toFixed(1),hp:z.userData.z.hp})}netSend({t:"zs",zs},0)}
-    }catch(e){console.error("NET_INTERVAL_ERROR:",e.message,e.stack);showError("联机错误: "+e.message,"⚠️ 联机错误",_errTag(e))}},100);
+    }catch(e){console.error("NET_ZS_ERROR:",e.message,e.stack);showError("联机错误: "+e.message,"⚠️ 联机错误",_errTag(e))}},100);
     toast("✅ 联机成功"+(_allIds.length>1?"（"+_allIds.length+"人在线）":""));
   }).catch(()=>{toast("联机失败（单机模式）")});
 }
@@ -443,18 +446,19 @@ function handleNet(msg){
   if(msg.id===myId)return;
   if(!_allIds.includes(msg.id)){_allIds.push(msg.id);_updateHost()}
   if(msg.t==="hb"){
-    if(!peers.has(msg.id)){peers.set(msg.id,{pos:new THREE.Vector3(msg.x,msg.y,msg.z),yaw:msg.yaw,hp:msg.hp,name:msg.name||"??",last:performance.now()});
+    const now=performance.now();
+    if(!peers.has(msg.id)){const pos=new THREE.Vector3(msg.x,msg.y,msg.z);peers.set(msg.id,{pos:pos,prevPos:pos.clone(),yaw:msg.yaw,prevYaw:msg.yaw,hp:msg.hp,name:msg.name||"??",last:now,tCurr:now,tPrev:now});
       const g=new THREE.Group();const bm2=new THREE.MeshLambertMaterial({color:0x3366ff});
       g.add(new THREE.Mesh(new THREE.BoxGeometry(0.8,0.9,0.4),bm2),new THREE.Mesh(new THREE.BoxGeometry(0.62,0.62,0.62),bm2));
       g.children[0].position.y=1.15;g.children[1].position.y=1.92;scene.add(g);actors.set(msg.id,g);
       toast("👋 "+msg.name+" 加入了游戏（"+_allIds.length+"人在线）");
-    }else{const p=peers.get(msg.id);p.last=performance.now();p.pos.set(msg.x,msg.y,msg.z);p.yaw=msg.yaw;p.hp=msg.hp;p.name=msg.name||p.name}
+    }else{const p=peers.get(msg.id);p.last=now;p.prevPos.copy(p.pos);p.prevYaw=p.yaw;p.tPrev=p.tCurr;p.pos.set(msg.x,msg.y,msg.z);p.yaw=msg.yaw;p.hp=msg.hp;p.name=msg.name||p.name;p.tCurr=now}
     if(msg.wave!==undefined&&msg.wave>wave){wave=msg.wave;waveTimer=msg.waveT||15}
   }else if(msg.t==="zs"&&!isHost){
-    const seen=new Set();
+    const seen=new Set();const now=performance.now();
     for(let i=0;i<msg.zs.length;i++){const d=msg.zs[i];seen.add(i);let rz=remoteZombies.get(i);
-      if(!rz){const m=new THREE.Group();m.add(new THREE.Mesh(RZGEO,RZMAT),new THREE.Mesh(RZHEAD,RZHEADMAT));m.children[0].position.y=1.15;m.children[1].position.y=1.92;scene.add(m);rz={mesh:m};remoteZombies.set(i,rz)}
-      rz.mesh.position.set(d.x,d.y,d.z);
+      if(!rz){const m=new THREE.Group();m.add(new THREE.Mesh(RZGEO,RZMAT),new THREE.Mesh(RZHEAD,RZHEADMAT));m.children[0].position.y=1.15;m.children[1].position.y=1.92;scene.add(m);const pos=new THREE.Vector3(d.x,d.y,d.z);rz={mesh:m,pos:pos,prevPos:pos.clone(),tCurr:now,tPrev:now};remoteZombies.set(i,rz)}
+      else{rz.prevPos.copy(rz.pos);rz.tPrev=rz.tCurr;rz.pos.set(d.x,d.y,d.z);rz.tCurr=now}
     }
     remoteZombies.forEach((rz,idx)=>{if(!seen.has(idx)){scene.remove(rz.mesh);remoteZombies.delete(idx)}});
   }else if(msg.t==="zk"){
@@ -465,7 +469,10 @@ function handleNet(msg){
     const a=actors.get(msg.id);if(a)a.children.forEach(c=>{c.material.emissive.setHex(0xff0000);setTimeout(()=>c.material.emissive.setHex(0),200)});
   }
 }
-function updatePeers(){actors.forEach((mesh,id)=>{const p=peers.get(id);if(!p||performance.now()-p.last>6000){scene.remove(mesh);actors.delete(id);peers.delete(id);return}mesh.position.copy(p.pos);mesh.rotation.y=p.yaw})}
+const NET_BUF=110;
+function _netAlpha(tPrev,tCurr){const span=tCurr-tPrev;if(span<=0)return 1;let a=(performance.now()-NET_BUF-tPrev)/span;return a<0?0:(a>1?1:a)}
+function updatePeers(){const now=performance.now();actors.forEach((mesh,id)=>{const p=peers.get(id);if(!p||now-p.last>6000){scene.remove(mesh);actors.delete(id);peers.delete(id);return}const a=_netAlpha(p.tPrev,p.tCurr);mesh.position.lerpVectors(p.prevPos,p.pos,a);let dy=p.yaw-p.prevYaw;while(dy>Math.PI)dy-=Math.PI*2;while(dy<-Math.PI)dy+=Math.PI*2;mesh.rotation.y=p.prevYaw+dy*a})}
+function updateRemoteZombies(){if(isHost)return;remoteZombies.forEach(rz=>{const a=_netAlpha(rz.tPrev,rz.tCurr);rz.mesh.position.lerpVectors(rz.prevPos,rz.pos,a)})}
 
 // ============================ 主循环 ============================
 const clock=new THREE.Clock();
@@ -482,7 +489,7 @@ function animate(){try{
   if(!player.dead){
     updateSky(dt);updatePlayer(dt);updateShoot(dt);
     if(isHost){updateZombies(dt);waveTimer-=dt;if(waveTimer<=0){spawnWave();waveTimer=Math.max(8,20-wave)}}
-    updatePeers();
+    updatePeers();updateRemoteZombies();
   }
   if(vignetteAmp>0){vignetteAmp=Math.max(0,vignetteAmp-dt*1.4);$('vignette').style.opacity=vignetteAmp}
   const fl=$('flash');if(parseFloat(fl.style.opacity||0)>0)fl.style.opacity=Math.max(0,parseFloat(fl.style.opacity)-dt*2.5);
