@@ -293,7 +293,7 @@ function playShoot(){noiseBurst(0.14,1400,0.35)}
 function playHurt(){try{const c=ac();const o=c.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(160,c.currentTime);o.frequency.exponentialRampToValueAtTime(60,c.currentTime+0.25);const g=c.createGain();g.gain.setValueAtTime(0.2,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.3);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.32)}catch(e){}}
 
 // ============================ 僵尸 ============================
-const zombies=[];let wave=0;let score=0;
+const zombies=[];let wave=0;let score=0;let _zid=0;
 function createZombie(x,z){
   const g=new THREE.Group();
   const mBody=new THREE.MeshLambertMaterial({color:0x5d8c4a});
@@ -308,7 +308,7 @@ function createZombie(x,z){
   const legL=new THREE.Mesh(new THREE.BoxGeometry(0.32,0.85,0.32),mDark);legL.position.set(-0.2,0.42,0);g.add(legL);
   const legR=legL.clone();legR.position.x=0.2;g.add(legR);
   const mats=[];g.traverse(o=>{if(o.isMesh)mats.push(o.material)});
-  g.userData.z={vel:new THREE.Vector3(),fling:false,dead:false,hp:3+wave,flashT:0,mats,speed:rand(1.4,2.4),wp:null,walk:rand(0,6)};
+  g.userData.z={vel:new THREE.Vector3(),fling:false,dead:false,id:++_zid,hp:3+wave,flashT:0,mats,speed:rand(1.4,2.4),wp:null,walk:rand(0,6)};
   g.position.set(x,surfaceHeight(x,z)+0.05,z);scene.add(g);zombies.push(g);return g;
 }
 function killZombie(z){
@@ -317,7 +317,7 @@ function killZombie(z){
   score+=10;$('score').textContent='分数: '+score;
   later(0.5,()=>{if(z.parent)scene.remove(z)});
   zombies.splice(zombies.indexOf(z),1);
-  if(netOk)netSend({t:"zk",x:+z.position.x.toFixed(1),y:+z.position.y.toFixed(1),z:+z.position.z.toFixed(1)},0);
+  if(netOk)netSend({t:"zk",id:z.userData.z.id},0);
 }
 function updateZombies(dt){
   for(let i=zombies.length-1;i>=0;i--){
@@ -377,16 +377,19 @@ function shoot(){try{
   recoil=1;muzzleT=0.06;gunGroup.userData.muzzle.visible=true;muzzleLight.intensity=30;playShoot();
   for(let i=0;i<4;i++)particles.spawn({x:player.pos.x,y:player.pos.y+EYE,z:player.pos.z,vx:rand(-0.6,0.6),vy:rand(-0.4,0.4),vz:rand(-0.6,0.6),life:rand(0.06,0.15),size:rand(0.2,0.45),gravity:0,color:0xffdd44});
   raycaster.setFromCamera(ndc,camera);
-  const zHits=raycaster.intersectObjects(zombies,true);
+  const zTargets=[];for(const z of zombies)zTargets.push(z);for(const r of remoteZombies.values())zTargets.push(r.mesh);
+  const zHits=raycaster.intersectObjects(zTargets,true);
   const bHits=raycaster.intersectObjects(Object.values(typeMeshes).filter(m=>!!m),false);
   let zHit=null,bHit=null;
-  if(zHits.length){let o=zHits[0].object;while(o&&!o.userData.z)o=o.parent;if(o&&o.userData.z)zHit={group:o,dist:zHits[0].distance,point:zHits[0].point}}
+  if(zHits.length){let o=zHits[0].object;while(o&&!o.userData.z&&o.userData.rzId===undefined)o=o.parent;
+    if(o&&o.userData.z)zHit={group:o,dist:zHits[0].distance,point:zHits[0].point,remote:false};
+    else if(o&&o.userData.rzId!==undefined)zHit={group:o,dist:zHits[0].distance,point:zHits[0].point,remote:true,id:o.userData.rzId}}
   if(bHits.length)bHit={dist:bHits[0].distance,point:bHits[0].point};
   let target=null;
   if(zHit&&(!bHit||zHit.dist<=bHit.dist))target=zHit;else if(bHit)target=bHit;
   if(!target)return;
   spawnImpact(target.point,0xffdd44,false,9);
-  if(target===zHit)damageZombie(zHit.group,1,target.point);
+  if(target===zHit){if(zHit.remote)netSend({t:"zh",id:zHit.id,dmg:1},0);else damageZombie(zHit.group,1,target.point)}
 }catch(e){console.error("SHOOT_ERROR:",e.message,e.stack);showError("射击错误: "+e.message,"⚠️ 射击错误",_errTag(e))}}
 function damageZombie(z,dmg,point){const st=z.userData.z;if(st.dead)return;st.hp-=dmg;st.flashT=0.15;if(point)spawnImpact(point,0xff4444,false,4);if(st.hp<=0)killZombie(z)}
 function updateShoot(dt){
@@ -436,7 +439,7 @@ function netStart(){
     }catch(e){console.error("NET_HB_ERROR:",e.message,e.stack);showError("联机错误: "+e.message,"⚠️ 联机错误",_errTag(e))}},50);
     setInterval(()=>{try{
       if(!netOk)return;
-      if(isHost){const zs=[];for(const z of zombies){if(z.userData.z.dead)continue;zs.push({x:+z.position.x.toFixed(1),y:+z.position.y.toFixed(1),z:+z.position.z.toFixed(1),hp:z.userData.z.hp})}netSend({t:"zs",zs},0)}
+      if(isHost){const zs=[];for(const z of zombies){if(z.userData.z.dead)continue;zs.push({id:z.userData.z.id,x:+z.position.x.toFixed(1),y:+z.position.y.toFixed(1),z:+z.position.z.toFixed(1),hp:z.userData.z.hp})}netSend({t:"zs",zs},0)}
     }catch(e){console.error("NET_ZS_ERROR:",e.message,e.stack);showError("联机错误: "+e.message,"⚠️ 联机错误",_errTag(e))}},100);
     toast("✅ 联机成功"+(_allIds.length>1?"（"+_allIds.length+"人在线）":""));
   }).catch(()=>{toast("联机失败（单机模式）")});
@@ -456,15 +459,17 @@ function handleNet(msg){
     if(msg.wave!==undefined&&msg.wave>wave){wave=msg.wave;waveTimer=msg.waveT||15}
   }else if(msg.t==="zs"&&!isHost){
     const seen=new Set();const now=performance.now();
-    for(let i=0;i<msg.zs.length;i++){const d=msg.zs[i];seen.add(i);let rz=remoteZombies.get(i);
-      if(!rz){const m=new THREE.Group();m.add(new THREE.Mesh(RZGEO,RZMAT),new THREE.Mesh(RZHEAD,RZHEADMAT));m.children[0].position.y=1.15;m.children[1].position.y=1.92;scene.add(m);const pos=new THREE.Vector3(d.x,d.y,d.z);rz={mesh:m,pos:pos,prevPos:pos.clone(),tCurr:now,tPrev:now};remoteZombies.set(i,rz)}
+    for(const d of msg.zs){seen.add(d.id);let rz=remoteZombies.get(d.id);
+      if(!rz){const m=new THREE.Group();m.add(new THREE.Mesh(RZGEO,RZMAT),new THREE.Mesh(RZHEAD,RZHEADMAT));m.children[0].position.y=1.15;m.children[1].position.y=1.92;m.userData.rzId=d.id;scene.add(m);const pos=new THREE.Vector3(d.x,d.y,d.z);rz={mesh:m,id:d.id,pos:pos,prevPos:pos.clone(),tCurr:now,tPrev:now};remoteZombies.set(d.id,rz)}
       else{rz.prevPos.copy(rz.pos);rz.tPrev=rz.tCurr;rz.pos.set(d.x,d.y,d.z);rz.tCurr=now}
     }
-    remoteZombies.forEach((rz,idx)=>{if(!seen.has(idx)){scene.remove(rz.mesh);remoteZombies.delete(idx)}});
+    remoteZombies.forEach((rz,id)=>{if(!seen.has(id)){scene.remove(rz.mesh);remoteZombies.delete(id)}});
   }else if(msg.t==="zk"){
-    let best=null,bestD=Infinity;
-    for(const z of zombies){if(z.userData.z.dead)continue;const d=Math.hypot(z.position.x-msg.x,z.position.y-msg.y,z.position.z-msg.z);if(d<bestD){bestD=d;best=z}}
-    if(best&&bestD<3)killZombie(best);
+    const rz=remoteZombies.get(msg.id);
+    if(rz){spawnSmoke(rz.mesh.position,2);spawnDebris(rz.mesh.position,2);scene.remove(rz.mesh);remoteZombies.delete(msg.id)}
+  }else if(msg.t==="zh"){
+    const z=zombies.find(zz=>zz.userData.z.id===msg.id);
+    if(z&&!z.userData.z.dead)damageZombie(z,msg.dmg||1);
   }else if(msg.t==="pl"){
     const a=actors.get(msg.id);if(a)a.children.forEach(c=>{c.material.emissive.setHex(0xff0000);setTimeout(()=>c.material.emissive.setHex(0),200)});
   }
